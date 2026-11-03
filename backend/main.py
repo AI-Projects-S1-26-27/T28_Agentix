@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import (
     alerts,
+    analytics,
     baseline,
     current,
     health,
@@ -153,6 +154,7 @@ app.include_router(current.router, prefix="/api")
 app.include_router(risks.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
+app.include_router(analytics.router, prefix="/api")
 app.include_router(baseline.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
