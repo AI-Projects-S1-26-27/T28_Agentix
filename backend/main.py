@@ -16,6 +16,7 @@ from backend.api.routes import (
     analytics,
     baseline,
     current,
+    export,
     health,
     history,
     risks,
@@ -155,6 +156,7 @@ app.include_router(risks.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
+app.include_router(export.router, prefix="/api")
 app.include_router(baseline.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
