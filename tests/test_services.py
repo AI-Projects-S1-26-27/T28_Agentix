@@ -100,3 +100,32 @@ async def test_data_service_orchestrates_flow(tmp_path):
     assert len(repo.recent()) == 1
     assert len(repo.recent_risks()) == 1
     assert len(repo.recent_alerts()) == 1
+
+
+@pytest.mark.anyio
+async def test_data_service_persists_personalized_anomaly_without_health_alert(tmp_path):
+    repo = MeasurementRepository(tmp_path / "test.db")
+    repo.initialize()
+    repo.save_baseline("S2", "heart_rate_bpm", 70.0, 5.0, 600, "stable")
+    repo.save_baseline("S2", "eda_microsiemens", 1.0, 0.2, 600, "stable")
+    repo.save_baseline("S2", "body_temperature_c", 36.8, 1.0, 600, "stable")
+    data_service = DataService(repository=repo)
+
+    measurement = make_measurement(
+        source="wesad",
+        participant_id="S2",
+        protocol_label=2,
+        heart_rate=90.0,
+        eda=1.2,
+    )
+    result = await data_service.ingest_reading(measurement)
+
+    anomaly = result["risk"].components["personalized_anomaly"]
+    assert anomaly["overall_status"] == "anomaly_detected"
+    assert anomaly["signals"]["heart_rate_bpm"]["anomaly"] == 1
+    assert result["risk"].severity == 0
+    assert result["alert"] is None
+
+    stored_risk = repo.get_risk_by_reading_id(result["reading"].id)
+    assert stored_risk is not None
+    assert stored_risk.components["personalized_anomaly"]["overall_anomaly"] == 1
