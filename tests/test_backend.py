@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import sqlite3
 
 import pytest
 
@@ -34,6 +35,10 @@ def test_measurement_requires_timezone_and_valid_ranges():
     with pytest.raises(ValueError):
         make_measurement(spo2=101)
 
+    assert make_measurement(protocol_label=7).protocol_label == 7
+    with pytest.raises(ValueError):
+        make_measurement(protocol_label=2.5)
+
 
 def test_repository_persists_optional_fields_and_orders_recent_first(tmp_path):
     repository = MeasurementRepository(tmp_path / "health.sqlite3")
@@ -56,6 +61,40 @@ def test_repository_persists_optional_fields_and_orders_recent_first(tmp_path):
     assert readings[0].spo2 is None
     assert readings[0].eda == 1.2
     assert readings[1].source == "simulator"
+
+
+def test_repository_migrates_existing_database_for_wesad_metadata(tmp_path):
+    database_path = tmp_path / "existing.sqlite3"
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE measurements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                source TEXT NOT NULL,
+                scenario TEXT,
+                heart_rate REAL,
+                spo2 REAL,
+                body_temperature REAL,
+                activity_level REAL,
+                ambient_temperature REAL,
+                humidity REAL,
+                aqi REAL,
+                pm25 REAL
+            )
+            """
+        )
+
+    repository = MeasurementRepository(database_path)
+    repository.initialize()
+    saved = repository.add(
+        make_measurement(participant_id="S2", protocol_label=2)
+    )
+
+    stored = repository.recent(limit=1)[0]
+    assert saved.participant_id == "S2"
+    assert stored.participant_id == "S2"
+    assert stored.protocol_label == 2
 
 
 def test_repository_persists_risk_assessment(tmp_path):

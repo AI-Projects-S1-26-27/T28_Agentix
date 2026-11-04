@@ -15,7 +15,7 @@ def run_end_to_end_sequence():
 
     # 1. Real Dataset Source
     raw_path = "data/processed/wesad_s2_real.csv"
-    print(f"\n[STEP 1: Real Dataset] Ingesting genuine clinical recording from {raw_path}...")
+    print(f"\n[STEP 1: Real Dataset] Ingesting WESAD participant recording from {raw_path}...")
     df_raw = pd.read_csv(raw_path)
     print(f"       Loaded {len(df_raw)} records. Columns: {list(df_raw.columns)}")
 

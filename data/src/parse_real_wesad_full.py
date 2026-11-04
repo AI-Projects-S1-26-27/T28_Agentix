@@ -36,19 +36,24 @@ def parse_subject(sub_id: str):
 
     total_seconds = min(len(eda) // 4, len(temp) // 4, len(labels) // 700)
 
-    if os.path.exists(hr_path) and os.path.exists(eda_path):
-        hr_start_ts, _, hr_raw = read_e4_header_and_values(hr_path)
+    session_start_ts = None
+    hr_offset_sec = 0
+    if os.path.exists(eda_path):
         eda_start_ts, _, _ = read_e4_header_and_values(eda_path)
-        hr_offset_sec = int(round(hr_start_ts - eda_start_ts))
         session_start_ts = eda_start_ts
-    elif os.path.exists(hr_path):
+
+    if os.path.exists(hr_path):
         hr_start_ts, _, hr_raw = read_e4_header_and_values(hr_path)
-        hr_offset_sec = 0
-        session_start_ts = hr_start_ts
+        if session_start_ts is None:
+            session_start_ts = hr_start_ts
+        else:
+            hr_offset_sec = int(round(hr_start_ts - session_start_ts))
     else:
         hr_raw = np.array([])
         hr_offset_sec = 0
-        session_start_ts = None
+
+    if session_start_ts is None:
+        print("  [WARN] No E4 timestamp metadata found; output timestamps will be empty.")
 
     print(f"  Stream lengths -> EDA(4Hz): {len(eda)}, TEMP(4Hz): {len(temp)}, Label(700Hz): {len(labels)}")
     print(f"  Aligned 1Hz duration: {total_seconds} s | HR.csv offset vs session start: {hr_offset_sec:+d} s | HR samples: {len(hr_raw)}")
@@ -67,7 +72,7 @@ def parse_subject(sub_id: str):
         if session_start_ts is not None:
             ts_str = datetime.fromtimestamp(session_start_ts + s, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         else:
-            ts_str = f"2026-11-11T{(s//3600):02d}:{(s%3600)//60:02d}:{s%60:02d}Z"
+            ts_str = None
 
         records.append({
             "participant_id": sub_id,
@@ -84,10 +89,11 @@ def parse_subject(sub_id: str):
     df.to_csv(output_path, index=False)
 
     missing_hr = int(df["heart_rate_bpm"].isna().sum())
+    missing_timestamps = len(df) if session_start_ts is None else 0
     label_counts = df["stress_label"].value_counts().sort_index().to_dict()
-    print(f"  Saved: {output_path} ({len(df)} rows, missing HR: {missing_hr})")
+    print(f"  Saved: {output_path} ({len(df)} rows, missing HR: {missing_hr}, missing timestamps: {missing_timestamps})")
     print(f"  Label distribution (0=transient, 1=baseline, 2=stress, 3=amusement, 4=meditation): {label_counts}")
-    return {"participant_id": sub_id, "rows": len(df), "missing_hr": missing_hr, "hr_offset_sec": hr_offset_sec, **label_counts}
+    return {"participant_id": sub_id, "rows": len(df), "missing_hr": missing_hr, "missing_timestamps": missing_timestamps, "hr_offset_sec": hr_offset_sec, **label_counts}
 
 if __name__ == "__main__":
     summary = []
