@@ -5,11 +5,11 @@ import pandas as pd
 url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=46.0569&longitude=14.5058&hourly=pm10,pm2_5&past_days=7"
 weather_url = "https://api.open-meteo.com/v1/forecast?latitude=46.0569&longitude=14.5058&hourly=temperature_2m,relative_humidity_2m&past_days=7"
 
-print("1. Downloading genuine recorded air quality from Ljubljana monitoring stations...")
+print("1. Downloading modeled air-quality data from the Open-Meteo API...")
 with urllib.request.urlopen(url) as resp:
     aq_data = json.loads(resp.read().decode())
 
-print("2. Downloading genuine recorded temperature & humidity from Ljubljana...")
+print("2. Downloading weather model data from the Open-Meteo API...")
 with urllib.request.urlopen(weather_url) as resp:
     weather_data = json.loads(resp.read().decode())
 
@@ -26,9 +26,9 @@ df_w = pd.DataFrame({
 })
 
 real_ljub = pd.merge(df_aq, df_w, on="timestamp").dropna()
-real_ljub["source"] = "Ljubljana_Official_Copernicus_Station"
-real_ljub["session_id"] = "Ljubljana_InSitu_2026"
+real_ljub["source"] = "Open-Meteo_API_Model_Data"
+real_ljub["session_id"] = "Ljubljana_OpenMeteo_API"
 
 out_path = "data/processed/ljubljana_real.csv"
 real_ljub.to_csv(out_path, index=False)
-print(f"[SUCCESS] Downloaded {len(real_ljub)} rows of genuine recorded Ljubljana environmental data to {out_path}!")
+print(f"[SUCCESS] Downloaded {len(real_ljub)} rows of Open-Meteo API data to {out_path}!")

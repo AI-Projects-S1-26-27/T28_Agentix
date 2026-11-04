@@ -27,6 +27,8 @@ class MeasurementRepository:
                     timestamp TEXT NOT NULL,
                     source TEXT NOT NULL,
                     scenario TEXT,
+                    participant_id TEXT,
+                    protocol_label INTEGER,
                     heart_rate REAL,
                     spo2 REAL,
                     body_temperature REAL,
@@ -44,11 +46,19 @@ class MeasurementRepository:
                 "ON measurements(timestamp)"
             )
 
-            # Ensure 'eda' column exists for existing tables
-            try:
-                connection.execute("ALTER TABLE measurements ADD COLUMN eda REAL")
-            except sqlite3.OperationalError:
-                pass
+            existing_columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(measurements)")
+            }
+            for column, column_type in (
+                ("eda", "REAL"),
+                ("participant_id", "TEXT"),
+                ("protocol_label", "INTEGER"),
+            ):
+                if column not in existing_columns:
+                    connection.execute(
+                        f"ALTER TABLE measurements ADD COLUMN {column} {column_type}"
+                    )
 
             # 2. Risk assessments table
             connection.execute(
@@ -128,10 +138,11 @@ class MeasurementRepository:
             cursor = connection.execute(
                 """
                 INSERT INTO measurements (
-                    timestamp, source, scenario, heart_rate, spo2,
+                    timestamp, source, scenario, participant_id, protocol_label,
+                    heart_rate, spo2,
                     body_temperature, activity_level, ambient_temperature,
                     humidity, aqi, pm25, eda
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 measurement.as_storage_tuple(),
             )
@@ -143,7 +154,8 @@ class MeasurementRepository:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 """
-                SELECT id, timestamp, source, scenario, heart_rate, spo2,
+                SELECT id, timestamp, source, scenario, participant_id,
+                       protocol_label, heart_rate, spo2,
                        body_temperature, activity_level, ambient_temperature,
                        humidity, aqi, pm25, eda
                 FROM measurements
@@ -162,7 +174,8 @@ class MeasurementRepository:
         offset: int = 0,
     ) -> list[MeasurementResponse]:
         query = (
-            "SELECT id, timestamp, source, scenario, heart_rate, spo2, "
+            "SELECT id, timestamp, source, scenario, participant_id, "
+            "protocol_label, heart_rate, spo2, "
             "body_temperature, activity_level, ambient_temperature, "
             "humidity, aqi, pm25, eda FROM measurements WHERE 1=1"
         )
