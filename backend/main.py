@@ -22,6 +22,7 @@ from backend.api.routes import (
     risks,
     scenarios,
     settings,
+    storage,
 )
 from backend.api.routes.context import router as context_router, get_context_flags
 from backend.api.routes.current import get_repository
@@ -157,6 +158,7 @@ app.include_router(alerts.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
+app.include_router(storage.router, prefix="/api")
 app.include_router(baseline.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
