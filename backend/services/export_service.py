@@ -81,7 +81,7 @@ class ExportService:
         self, limit: int = 1000
     ) -> Tuple[str, ExportManifest]:
         readings = self._repository.recent(limit=limit)
-        data = [r.dict() if hasattr(r, "dict") else r.model_dump() for r in readings]
+        data = [r.model_dump() if hasattr(r, "model_dump") else r.dict() for r in readings]
 
         # Convert datetime objects to strings
         for row in data:

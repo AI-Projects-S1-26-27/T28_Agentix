@@ -153,6 +153,19 @@ app.add_middleware(
 app.dependency_overrides[get_repository] = lambda: repository
 
 app.include_router(health.router)
+
+
+@app.get("/", tags=["root"])
+def root_service_index():
+    return {
+        "service": "HealthSensing API",
+        "status": "online",
+        "version": "0.2.0",
+        "docs_url": "/docs",
+        "health_check": "/health",
+        "live_readings": "/api/readings/latest",
+        "dashboard_url": "https://healthsensing.vercel.app",
+    }
 app.include_router(current.router, prefix="/api")
 app.include_router(risks.router, prefix="/api")
 app.include_router(alerts.router, prefix="/api")

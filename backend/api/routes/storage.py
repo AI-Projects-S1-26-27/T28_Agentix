@@ -20,7 +20,7 @@ def get_storage_statistics(
 
 @router.post("/checkpoint")
 def checkpoint_wal_journal(
-    mode: str = Query(default="PASSIVE", regex="^(PASSIVE|FULL|RESTART|TRUNCATE)$"),
+    mode: str = Query(default="PASSIVE", pattern="^(PASSIVE|FULL|RESTART|TRUNCATE)$"),
     manager: StorageManager = Depends(get_storage_manager),
 ) -> Dict[str, Any]:
     return manager.checkpoint_wal(mode=mode)
