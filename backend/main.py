@@ -19,6 +19,7 @@ from backend.api.routes import (
     export,
     health,
     history,
+    metrics,
     risks,
     scenarios,
     settings,
@@ -159,6 +160,7 @@ app.include_router(history.router, prefix="/api")
 app.include_router(analytics.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
 app.include_router(storage.router, prefix="/api")
+app.include_router(metrics.router, prefix="/api")
 app.include_router(baseline.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
