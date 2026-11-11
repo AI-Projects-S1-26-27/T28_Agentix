@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from fastapi.encoders import jsonable_encoder
+
 from backend.db.database import MeasurementRepository
 from backend.models.alert import AlertResponse
 from backend.models.measurement import Measurement, MeasurementResponse
@@ -49,14 +51,14 @@ class DataService:
 
         # 5. Broadcast to connected WebSocket clients
         if self.websocket_manager:
-            broadcast_payload = {
+            broadcast_payload = jsonable_encoder({
                 "type": "reading_processed",
                 "reading": saved_reading.to_dict(),
                 "risk": saved_risk.to_dict(),
                 "alert": saved_alert.to_dict() if saved_alert else None,
                 # Include root fields for backward compatibility with older clients
                 **saved_reading.to_dict(),
-            }
+            })
             await self.websocket_manager.broadcast(broadcast_payload)
 
         return {
