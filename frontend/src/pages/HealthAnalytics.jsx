@@ -3,6 +3,7 @@ import LiveChart from '../components/LiveChart'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
+import store from '../services/dataStore'
 import { fmt, fmtRelative, SIGNAL_LABELS } from '../utils/formatters'
 import { HeartPulse, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
@@ -37,41 +38,42 @@ function getTrend(arr, key) {
 }
 
 export default function HealthAnalytics() {
-  const [latest, setLatest] = useState(null)
-  const [history, setHistory] = useState([])
   const { isConnected } = useConnection()
+  const [latest, setLatest] = useState(store.latest)
+  const [history, setHistory] = useState(store.history)
+
+  const updateHistory = useCallback((data) => {
+    store.history = data
+    setHistory(data)
+  }, [])
 
   const handleReading = useCallback((data) => {
+    store.latest = data
     setLatest(data)
-    setHistory(prev => [...prev, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-120))
-  }, [])
+    updateHistory([...store.history, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-120))
+  }, [updateHistory])
 
   useWebSocket(handleReading)
 
-  // Initial load
   useEffect(() => {
-    api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
-    api.history.readings({ limit: 120 }).then(r => setHistory(r ?? [])).catch(() => {})
-  }, [])
+    if (!store.latest) {
+      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+    }
+    if (store.history.length === 0) {
+      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+    }
+  }, [updateHistory])
 
-  // REST fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    const id = setInterval(() => {
-      api.readings.latest()
-        .then(r => {
-          if (!r?.reading) return
-          setLatest(r.reading)
-          setHistory(prev => {
-            const last = prev[prev.length - 1]
-            if (last?.timestamp === r.reading.timestamp) return prev
-            return [...prev, { ...r.reading }].slice(-120)
-          })
-        })
-        .catch(() => {})
+    const latestId = setInterval(() => {
+      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
     }, 2000)
-    return () => clearInterval(id)
-  }, [isConnected])
+    const histId = setInterval(() => {
+      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+    }, 3000)
+    return () => { clearInterval(latestId); clearInterval(histId) }
+  }, [isConnected, updateHistory])
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
 
