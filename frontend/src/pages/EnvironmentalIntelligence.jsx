@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import LiveChart from '../components/LiveChart'
-import useWebSocket from '../hooks/useWebSocket'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
 import { fmt, aqiCategory, SIGNAL_LABELS } from '../utils/formatters'
 import { Wind, Thermometer, Droplets, AlertTriangle } from 'lucide-react'
