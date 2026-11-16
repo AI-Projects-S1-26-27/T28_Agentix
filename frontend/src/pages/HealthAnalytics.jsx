@@ -57,15 +57,20 @@ export default function HealthAnalytics() {
   // REST fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    // Update latest every 2s
-    const latestId = setInterval(() => {
-      api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
+    const id = setInterval(() => {
+      api.readings.latest()
+        .then(r => {
+          if (!r?.reading) return
+          setLatest(r.reading)
+          setHistory(prev => {
+            const last = prev[prev.length - 1]
+            if (last?.timestamp === r.reading.timestamp) return prev
+            return [...prev, { ...r.reading }].slice(-120)
+          })
+        })
+        .catch(() => {})
     }, 2000)
-    // Refresh chart history every 5s (replace to avoid flat lines from repeated appends)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) setHistory(r) }).catch(() => {})
-    }, 5000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
+    return () => clearInterval(id)
   }, [isConnected])
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
@@ -80,7 +85,6 @@ export default function HealthAnalytics() {
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Biometric signals from wearable sensors</p>
       </div>
 
-      {/* Quick stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {signals.map(sig => {
           const meta = SIGNAL_LABELS[sig] ?? { label: sig, unit: '', color: 'var(--accent-primary)' }
@@ -97,7 +101,6 @@ export default function HealthAnalytics() {
         })}
       </div>
 
-      {/* Trend charts */}
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -109,7 +112,6 @@ export default function HealthAnalytics() {
         </div>
       </div>
 
-      {/* Baseline comparison */}
       {latest && (
         <div className="card rounded-xl p-5">
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Current Reading</h3>
