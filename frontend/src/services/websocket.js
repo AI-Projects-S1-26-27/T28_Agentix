@@ -1,4 +1,7 @@
-const WS_URL = `ws://${window.location.hostname}:8000/ws/readings`
+// Use Vite's proxy (/ws → ws://localhost:8080) so this works in both dev and prod
+const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws/readings`
+
 const RECONNECT_DELAY_MS = 3000
 const HEARTBEAT_INTERVAL_MS = 20000
 
