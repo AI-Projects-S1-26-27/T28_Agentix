@@ -6,53 +6,61 @@ import RiskCard from '../components/RiskCard'
 import LiveChart from '../components/LiveChart'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
+import store from '../services/dataStore'
 import { Activity, Wifi, WifiOff } from 'lucide-react'
 
 export default function Dashboard() {
   const { isConnected } = useConnection()
-  const [latest, setLatest] = useState(null)
-  const [riskData, setRiskData] = useState(null)
-  const [history, setHistory] = useState([])
+  // Initialize from shared store so navigation doesn't reset charts
+  const [latest, setLatest] = useState(store.latest)
+  const [riskData, setRiskData] = useState(store.riskData)
+  const [history, setHistory] = useState(store.history)
+
+  const updateHistory = useCallback((data) => {
+    store.history = data
+    setHistory(data)
+  }, [])
 
   const handleReading = useCallback((data) => {
+    store.latest = data
     setLatest(data)
-    setHistory(prev => [...prev, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-60))
-  }, [])
+    updateHistory([...store.history, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-60))
+  }, [updateHistory])
 
   useWebSocket(handleReading)
 
-  // Initial load
+  // Initial load (skip if store already has data)
   useEffect(() => {
-    api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
-    api.risks.latest().then(setRiskData).catch(() => {})
-    api.history.readings({ limit: 60 }).then(r => setHistory(r ?? [])).catch(() => {})
-  }, [])
+    if (!store.latest) {
+      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+    }
+    if (!store.riskData) {
+      api.risks.latest().then(r => { store.riskData = r; setRiskData(r) }).catch(() => {})
+    }
+    if (store.history.length === 0) {
+      api.history.readings({ limit: 60 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+    }
+  }, [updateHistory])
 
   // Fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    const id = setInterval(() => {
-      api.readings.latest()
-        .then(r => {
-          if (!r?.reading) return
-          setLatest(r.reading)
-          // Only append if timestamp is genuinely new (avoids flat-line from duplicates)
-          setHistory(prev => {
-            const last = prev[prev.length - 1]
-            if (last?.timestamp === r.reading.timestamp) return prev
-            return [...prev, { ...r.reading }].slice(-60)
-          })
-        })
-        .catch(() => {})
-      api.risks.latest().then(setRiskData).catch(() => {})
+    // Latest metric values every 2s
+    const latestId = setInterval(() => {
+      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+      api.risks.latest().then(r => { store.riskData = r; setRiskData(r) }).catch(() => {})
     }, 2000)
-    return () => clearInterval(id)
-  }, [isConnected])
+    // History every 3s — replace with real backend data so charts keep moving
+    const histId = setInterval(() => {
+      api.history.readings({ limit: 60 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+    }, 3000)
+    return () => { clearInterval(latestId); clearInterval(histId) }
+  }, [isConnected, updateHistory])
 
   // Refresh risk on new WS reading
   useEffect(() => {
     if (!latest || !isConnected) return
-    api.risks.latest().then(setRiskData).catch(() => {})
+    api.risks.latest().then(r => { store.riskData = r; setRiskData(r) }).catch(() => {})
   }, [latest, isConnected])
 
   return (
