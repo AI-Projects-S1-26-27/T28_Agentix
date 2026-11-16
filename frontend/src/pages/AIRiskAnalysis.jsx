@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import RiskCard from '../components/RiskCard'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
-import { getRiskMeta, fmtRelative, fmtTime } from '../utils/formatters'
+import { store } from '../services/dataStore'
+import { getRiskMeta, fmtRelative } from '../utils/formatters'
 import { Brain, ChevronRight, Shield } from 'lucide-react'
 
 function RiskHistoryRow({ item, onClick }) {
@@ -30,28 +31,42 @@ function RiskHistoryRow({ item, onClick }) {
 }
 
 export default function AIRiskAnalysis() {
-  const [latest, setLatest] = useState(null)
-  const [history, setHistory] = useState([])
+  const { latestReading } = useConnection()
+  const [latest, setLatest] = useState(store.riskData ?? null)
+  const [history, setHistory] = useState(store.riskHistory ?? [])
   const [selected, setSelected] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!store.riskData)
 
-  const handleReading = useCallback(() => {
-    api.risks.latest().then(r => { setLatest(r); setLoading(false) }).catch(() => setLoading(false))
-  }, [])
-
-  useWebSocket(handleReading)
-
+  // Initial load — skip if already have cached data
   useEffect(() => {
+    if (store.riskData && store.riskHistory?.length) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     Promise.all([
       api.risks.latest(),
-      api.risks.history?.({ limit: 20 }) ?? Promise.resolve([]),
+      api.risks.recent(20),
     ]).then(([l, h]) => {
+      store.riskData = l
+      store.riskHistory = h ?? []
       setLatest(l)
-      setHistory(h ?? [])
+      setHistory(store.riskHistory)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
+
+  // Refresh risk on each new reading (WS or polling)
+  useEffect(() => {
+    if (!latestReading) return
+    api.risks.latest().then(r => {
+      if (!r) return
+      store.riskData = r
+      store.riskHistory = [r, ...(store.riskHistory ?? []).filter(x => x?.timestamp !== r?.timestamp)].slice(0, 20)
+      setLatest(r)
+      setHistory(store.riskHistory)
+    }).catch(() => {})
+  }, [latestReading])
 
   const displayed = selected ?? latest
 
