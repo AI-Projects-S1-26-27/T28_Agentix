@@ -95,11 +95,13 @@ export default function HealthAnalytics() {
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LiveChart signal="heart_rate"       data={history} refLines={[{ value: 100 }, { value: 50 }]} />
-          <LiveChart signal="spo2"             data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="body_temperature" data={history} refLines={[{ value: 38 }, { value: 35 }]} />
-          <LiveChart signal="activity_level"   data={history} />
-          <LiveChart signal="eda"              data={history} />
+          {(() => { const w = history.slice(-30); return (<>
+          <LiveChart signal="heart_rate"       data={w} refLines={[{ value: 100 }, { value: 50 }]} />
+          <LiveChart signal="spo2"             data={w} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="body_temperature" data={w} refLines={[{ value: 38 }, { value: 35 }]} />
+          <LiveChart signal="activity_level"   data={w} />
+          <LiveChart signal="eda"              data={w} />
+          </>) })()}
         </div>
       </div>
 
