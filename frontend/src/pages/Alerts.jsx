@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import AlertCard from '../components/AlertCard'
-import useWebSocket from '../hooks/useWebSocket'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
 import { BellRing, CheckCheck, Inbox, Filter } from 'lucide-react'
 
