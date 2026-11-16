@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import LiveChart from '../components/LiveChart'
-import { useWebSocket } from '../hooks/useWebSocket'
 import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
 import store from '../services/dataStore'
@@ -33,44 +32,48 @@ function EnvStat({ icon: Icon, label, value, unit, warning, color }) {
 }
 
 export default function EnvironmentalIntelligence() {
-  const { isConnected } = useConnection()
-  const [latest, setLatest] = useState(store.latest)
+  const { isConnected, latestReading } = useConnection()
+  const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.envHistory)
 
-  const updateHistory = useCallback((data) => {
-    store.envHistory = data
-    setHistory(data)
-  }, [])
+  // Real-time updates from app-level WebSocket
+  useEffect(() => {
+    if (!latestReading) return
+    setLatest(latestReading)
+    setHistory([...store.envHistory])
+  }, [latestReading])
 
-  const handleReading = useCallback((data) => {
-    store.latest = data
-    setLatest(data)
-    updateHistory([...store.envHistory, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-120))
-  }, [updateHistory])
-
-  useWebSocket(handleReading)
-
+  // Initial load
   useEffect(() => {
     if (!store.latest) {
-      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+      api.readings.latest()
+        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
+        .catch(() => {})
     }
     if (store.envHistory.length === 0) {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+      api.history.readings({ limit: 120 })
+        .then(r => { if (r?.length) { store.envHistory = r; setHistory(r) } })
+        .catch(() => {})
     }
-  }, [updateHistory])
+  }, [])
 
+  // Polling fallback when disconnected
   useEffect(() => {
     if (isConnected) return
     const latestId = setInterval(() => {
-      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+      api.readings.latest()
+        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
+        .catch(() => {})
     }, 2000)
     const histId = setInterval(() => {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+      api.history.readings({ limit: 120 })
+        .then(r => { if (r?.length) { store.envHistory = r; setHistory(r) } })
+        .catch(() => {})
     }, 3000)
     return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected, updateHistory])
+  }, [isConnected])
 
-  const aqi = latest?.aqi ?? null
+  const aqi    = latest?.aqi ?? null
   const aqiCat = aqiCategory(aqi ?? 0)
 
   return (
@@ -107,19 +110,27 @@ export default function EnvironmentalIntelligence() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <EnvStat icon={Thermometer} label="Ambient Temp" value={latest?.ambient_temperature != null ? fmt(latest.ambient_temperature) : null} unit="°C" warning={(latest?.ambient_temperature ?? 0) > 35} color="var(--accent-warning)" />
-        <EnvStat icon={Droplets} label="Humidity" value={latest?.humidity != null ? fmt(latest.humidity, 0) : null} unit="%" warning={(latest?.humidity ?? 0) > 80} color="var(--accent-env)" />
-        <EnvStat icon={Wind} label="AQI" value={aqi != null ? fmt(aqi, 0) : null} unit="" warning={(aqi ?? 0) > 100} color={aqiCat.color} />
-        <EnvStat icon={AlertTriangle} label="PM2.5" value={latest?.pm25 != null ? fmt(latest.pm25) : null} unit="µg/m³" warning={(latest?.pm25 ?? 0) > 35} color="var(--accent-danger)" />
+        <EnvStat icon={Thermometer} label="Ambient Temp"
+          value={latest?.ambient_temperature != null ? fmt(latest.ambient_temperature) : null}
+          unit="°C" warning={(latest?.ambient_temperature ?? 0) > 35} color="var(--accent-warning)" />
+        <EnvStat icon={Droplets} label="Humidity"
+          value={latest?.humidity != null ? fmt(latest.humidity, 0) : null}
+          unit="%" warning={(latest?.humidity ?? 0) > 80} color="var(--accent-env)" />
+        <EnvStat icon={Wind} label="AQI"
+          value={aqi != null ? fmt(aqi, 0) : null}
+          unit="" warning={(aqi ?? 0) > 100} color={aqiCat.color} />
+        <EnvStat icon={AlertTriangle} label="PM2.5"
+          value={latest?.pm25 != null ? fmt(latest.pm25) : null}
+          unit="µg/m³" warning={(latest?.pm25 ?? 0) > 35} color="var(--accent-danger)" />
       </div>
 
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LiveChart signal="aqi" data={history} refLines={[{ value: 50, color: 'var(--accent-warning)' }, { value: 100, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="pm25" data={history} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="aqi"                 data={history} refLines={[{ value: 50, color: 'var(--accent-warning)' }, { value: 100, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="pm25"               data={history} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
           <LiveChart signal="ambient_temperature" data={history} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="humidity" data={history} refLines={[{ value: 80, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="humidity"            data={history} refLines={[{ value: 80, color: 'var(--accent-warning)' }]} />
         </div>
       </div>
     </div>
