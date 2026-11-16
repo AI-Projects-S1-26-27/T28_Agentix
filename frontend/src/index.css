@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT THEME (default :root) */
+:root {
+  --bg: #f8f9fc;
+  --surface: #ffffff;
+  --surface-elevated: #f0f2f8;
+  --border: #e2e4ed;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --accent-primary: #2563eb;
+  --accent-health: #059669;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+  --accent-critical: #7c3aed;
+  --accent-env: #0284c7;
+}
+
+/* DARK THEME */
+.dark {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface-elevated: #1a1a26;
+  --border: #2a2a3d;
+  --text-primary: #f0f0f5;
+  --text-secondary: #9090aa;
+  --text-muted: #60607a;
+  --accent-primary: #4f8ef7;
+  --accent-health: #34d399;
+  --accent-warning: #fbbf24;
+  --accent-danger: #f87171;
+  --accent-critical: #c084fc;
+  --accent-env: #38bdf8;
+}
+
+/* Base */
+* { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease; }
+body { background-color: var(--bg); color: var(--text-primary); font-family: 'Inter', system-ui, sans-serif; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+
+@layer components {
+  .card { @apply rounded-lg border p-4; background: var(--surface); border-color: var(--border); }
+  .card-elevated { @apply rounded-lg border p-4; background: var(--surface-elevated); border-color: var(--border); }
+  .btn-primary { @apply px-4 py-2 rounded-md text-sm font-medium text-white transition-all; background: var(--accent-primary); }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-ghost { @apply px-3 py-2 rounded-md text-sm font-medium transition-all; color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--surface-elevated); color: var(--text-primary); }
+  .metric-value { @apply text-2xl font-semibold font-mono; }
+  .metric-label { @apply text-xs font-medium uppercase tracking-wider; color: var(--text-muted); }
+  .nav-item { @apply flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all cursor-pointer; color: var(--text-secondary); }
+  .nav-item:hover { background: var(--surface-elevated); color: var(--text-primary); }
+  .nav-item.active { color: var(--accent-primary); background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
+  .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+  .skeleton { @apply animate-pulse rounded; background: var(--surface-elevated); }
+}
