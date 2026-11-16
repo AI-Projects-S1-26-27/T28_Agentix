@@ -31,13 +31,16 @@ export default function Dashboard() {
   // Fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    const id = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { setLatest(r.reading); setHistory(prev => [...prev, { ...r.reading }].slice(-60)) } })
-        .catch(() => {})
+    // Update latest metric values every 2s
+    const latestId = setInterval(() => {
+      api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
       api.risks.latest().then(setRiskData).catch(() => {})
     }, 2000)
-    return () => clearInterval(id)
+    // Refresh chart history every 5s (replace, not append, to avoid flat lines)
+    const histId = setInterval(() => {
+      api.history.readings({ limit: 60 }).then(r => { if (r?.length) setHistory(r) }).catch(() => {})
+    }, 5000)
+    return () => { clearInterval(latestId); clearInterval(histId) }
   }, [isConnected])
 
   // Refresh risk on new WS reading
