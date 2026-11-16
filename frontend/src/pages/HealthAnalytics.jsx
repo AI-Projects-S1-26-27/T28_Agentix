@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import LiveChart from '../components/LiveChart'
-import { useWebSocket } from '../hooks/useWebSocket'
 import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
 import store from '../services/dataStore'
@@ -31,49 +30,53 @@ function getTrend(arr, key) {
   const half = Math.floor(arr.length / 2)
   const avg = vals => vals.reduce((s, v) => s + (v[key] ?? 0), 0) / vals.length
   const early = avg(arr.slice(0, half))
-  const late = avg(arr.slice(half))
+  const late  = avg(arr.slice(half))
   if (late > early * 1.03) return 'up'
   if (late < early * 0.97) return 'down'
   return 'stable'
 }
 
 export default function HealthAnalytics() {
-  const { isConnected } = useConnection()
-  const [latest, setLatest] = useState(store.latest)
+  const { isConnected, latestReading } = useConnection()
+  const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.history)
 
-  const updateHistory = useCallback((data) => {
-    store.history = data
-    setHistory(data)
-  }, [])
+  // Real-time updates from app-level WebSocket
+  useEffect(() => {
+    if (!latestReading) return
+    setLatest(latestReading)
+    setHistory([...store.history])
+  }, [latestReading])
 
-  const handleReading = useCallback((data) => {
-    store.latest = data
-    setLatest(data)
-    updateHistory([...store.history, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-120))
-  }, [updateHistory])
-
-  useWebSocket(handleReading)
-
+  // Initial load
   useEffect(() => {
     if (!store.latest) {
-      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+      api.readings.latest()
+        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
+        .catch(() => {})
     }
     if (store.history.length === 0) {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+      api.history.readings({ limit: 120 })
+        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .catch(() => {})
     }
-  }, [updateHistory])
+  }, [])
 
+  // Polling fallback when disconnected
   useEffect(() => {
     if (isConnected) return
     const latestId = setInterval(() => {
-      api.readings.latest().then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } }).catch(() => {})
+      api.readings.latest()
+        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
+        .catch(() => {})
     }, 2000)
     const histId = setInterval(() => {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) updateHistory(r) }).catch(() => {})
+      api.history.readings({ limit: 120 })
+        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .catch(() => {})
     }, 3000)
     return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected, updateHistory])
+  }, [isConnected])
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
 
@@ -106,11 +109,11 @@ export default function HealthAnalytics() {
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LiveChart signal="heart_rate" data={history} refLines={[{ value: 100 }, { value: 50 }]} />
-          <LiveChart signal="spo2" data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="heart_rate"       data={history} refLines={[{ value: 100 }, { value: 50 }]} />
+          <LiveChart signal="spo2"             data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
           <LiveChart signal="body_temperature" data={history} refLines={[{ value: 38 }, { value: 35 }]} />
-          <LiveChart signal="activity_level" data={history} />
-          <LiveChart signal="eda" data={history} />
+          <LiveChart signal="activity_level"   data={history} />
+          <LiveChart signal="eda"              data={history} />
         </div>
       </div>
 
