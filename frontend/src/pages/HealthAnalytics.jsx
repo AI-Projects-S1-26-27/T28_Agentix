@@ -37,7 +37,7 @@ function getTrend(arr, key) {
 }
 
 export default function HealthAnalytics() {
-  const { isConnected, latestReading } = useConnection()
+  const { latestReading } = useConnection()
   const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.history)
 
@@ -57,26 +57,12 @@ export default function HealthAnalytics() {
     }
     if (store.history.length === 0) {
       api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .then(r => { if (r?.length) { store.history = r.slice().reverse(); setHistory(store.history) } })
         .catch(() => {})
     }
   }, [])
 
-  // Polling fallback when disconnected
-  useEffect(() => {
-    if (isConnected) return
-    const latestId = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
-        .catch(() => {})
-    }, 2000)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
-        .catch(() => {})
-    }, 3000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected])
+  // App-level polling (App.jsx) handles WS-down fallback.
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
 

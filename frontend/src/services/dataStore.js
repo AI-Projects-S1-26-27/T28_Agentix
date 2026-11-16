@@ -4,8 +4,10 @@
 const store = {
   latest: null,
   riskData: null,
+  riskHistory: [],    // shared by AIRiskAnalysis
   history: [],        // shared by Dashboard + HealthAnalytics
   envHistory: [],     // shared by EnvironmentalIntelligence (same data, separate slice)
 }
 
+export { store }
 export default store

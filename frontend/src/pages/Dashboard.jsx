@@ -10,6 +10,7 @@ import { Activity, Wifi, WifiOff } from 'lucide-react'
 
 export default function Dashboard() {
   const { isConnected, latestReading } = useConnection()
+  // isConnected used only for status badge
   const [latest, setLatest] = useState(store.latest)
   const [riskData, setRiskData] = useState(store.riskData)
   const [history, setHistory] = useState(store.history)
@@ -21,13 +22,13 @@ export default function Dashboard() {
     setHistory([...store.history])
   }, [latestReading])
 
-  // Refresh risk score whenever a new reading arrives
+  // Refresh risk score whenever a new reading arrives (WS or polling)
   useEffect(() => {
-    if (!latestReading || !isConnected) return
+    if (!latestReading) return
     api.risks.latest()
       .then(r => { store.riskData = r; setRiskData(r) })
       .catch(() => {})
-  }, [latestReading, isConnected])
+  }, [latestReading])
 
   // Initial load on first mount (skipped if store already has data)
   useEffect(() => {
@@ -43,29 +44,13 @@ export default function Dashboard() {
     }
     if (store.history.length === 0) {
       api.history.readings({ limit: 60 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .then(r => { if (r?.length) { store.history = r.slice().reverse(); setHistory(store.history) } })
         .catch(() => {})
     }
   }, [])
 
-  // Polling fallback when WebSocket is disconnected
-  useEffect(() => {
-    if (isConnected) return
-    const latestId = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
-        .catch(() => {})
-      api.risks.latest()
-        .then(r => { store.riskData = r; setRiskData(r) })
-        .catch(() => {})
-    }, 2000)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 60 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
-        .catch(() => {})
-    }, 3000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected])
+  // App-level polling (App.jsx) handles WS-down fallback for readings.
+  // Per-page polling removed to avoid duplicate intervals and stale context.
 
   return (
     <div className="space-y-6">
