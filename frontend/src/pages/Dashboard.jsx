@@ -1,26 +1,22 @@
-import { useContext, useState, useEffect, useCallback } from 'react'
-import { ConnectionContext } from '../contexts/ConnectionContext'
-import { ThemeContext } from '../contexts/ThemeContext'
+import { useState, useEffect, useCallback } from 'react'
+import { useConnection } from '../context/ConnectionContext'
 import HealthCard from '../components/HealthCard'
 import EnvironmentCard from '../components/EnvironmentCard'
 import RiskCard from '../components/RiskCard'
 import LiveChart from '../components/LiveChart'
-import useWebSocket from '../hooks/useWebSocket'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
 import { Activity, Wifi, WifiOff } from 'lucide-react'
 
 export default function Dashboard() {
-  const { isConnected } = useContext(ConnectionContext)
+  const { isConnected } = useConnection()
   const [latest, setLatest] = useState(null)
   const [riskData, setRiskData] = useState(null)
   const [history, setHistory] = useState([])
 
   const handleReading = useCallback((data) => {
     setLatest(data)
-    setHistory(prev => {
-      const next = [...prev, { ...data, timestamp: data.timestamp ?? Date.now() }]
-      return next.slice(-60) // keep last 60 readings
-    })
+    setHistory(prev => [...prev, { ...data, timestamp: data.timestamp ?? Date.now() }].slice(-60))
   }, [])
 
   useWebSocket(handleReading)
@@ -30,7 +26,6 @@ export default function Dashboard() {
     api.history.readings({ limit: 60 }).then(r => setHistory(r ?? [])).catch(() => {})
   }, [])
 
-  // Refresh risk on new reading
   useEffect(() => {
     if (!latest) return
     api.risks.latest().then(setRiskData).catch(() => {})
@@ -38,7 +33,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
@@ -52,14 +46,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Top metrics row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <HealthCard reading={latest} />
         <EnvironmentCard reading={latest} />
         <RiskCard risk={riskData} />
       </div>
 
-      {/* Live charts */}
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
           <Activity size={16} className="inline mr-2" style={{ color: 'var(--accent-primary)' }} />

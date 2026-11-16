@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import LiveChart from '../components/LiveChart'
-import useWebSocket from '../hooks/useWebSocket'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
 import { fmt, fmtRelative, SIGNAL_LABELS } from '../utils/formatters'
 import { HeartPulse, TrendingUp, TrendingDown, Minus } from 'lucide-react'
