@@ -21,15 +21,30 @@ export default function Dashboard() {
 
   useWebSocket(handleReading)
 
+  // Initial load
   useEffect(() => {
+    api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
     api.risks.latest().then(setRiskData).catch(() => {})
     api.history.readings({ limit: 60 }).then(r => setHistory(r ?? [])).catch(() => {})
   }, [])
 
+  // Fallback polling when WebSocket is disconnected
   useEffect(() => {
-    if (!latest) return
+    if (isConnected) return
+    const id = setInterval(() => {
+      api.readings.latest()
+        .then(r => { if (r?.reading) { setLatest(r.reading); setHistory(prev => [...prev, { ...r.reading }].slice(-60)) } })
+        .catch(() => {})
+      api.risks.latest().then(setRiskData).catch(() => {})
+    }, 2000)
+    return () => clearInterval(id)
+  }, [isConnected])
+
+  // Refresh risk on new WS reading
+  useEffect(() => {
+    if (!latest || !isConnected) return
     api.risks.latest().then(setRiskData).catch(() => {})
-  }, [latest])
+  }, [latest, isConnected])
 
   return (
     <div className="space-y-6">
