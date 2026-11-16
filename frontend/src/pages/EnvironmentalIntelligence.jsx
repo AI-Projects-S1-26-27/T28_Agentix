@@ -52,12 +52,15 @@ export default function EnvironmentalIntelligence() {
   // REST fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    const id = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { setLatest(r.reading); setHistory(prev => [...prev, { ...r.reading }].slice(-120)) } })
-        .catch(() => {})
+    // Update latest every 2s
+    const latestId = setInterval(() => {
+      api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
     }, 2000)
-    return () => clearInterval(id)
+    // Refresh chart history every 5s (replace to avoid flat lines from repeated appends)
+    const histId = setInterval(() => {
+      api.history.readings({ limit: 120 }).then(r => { if (r?.length) setHistory(r) }).catch(() => {})
+    }, 5000)
+    return () => { clearInterval(latestId); clearInterval(histId) }
   }, [isConnected])
 
   const aqi = latest?.aqi ?? null
