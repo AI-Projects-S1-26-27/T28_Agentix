@@ -52,15 +52,20 @@ export default function EnvironmentalIntelligence() {
   // REST fallback polling when WebSocket is disconnected
   useEffect(() => {
     if (isConnected) return
-    // Update latest every 2s
-    const latestId = setInterval(() => {
-      api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
+    const id = setInterval(() => {
+      api.readings.latest()
+        .then(r => {
+          if (!r?.reading) return
+          setLatest(r.reading)
+          setHistory(prev => {
+            const last = prev[prev.length - 1]
+            if (last?.timestamp === r.reading.timestamp) return prev
+            return [...prev, { ...r.reading }].slice(-120)
+          })
+        })
+        .catch(() => {})
     }, 2000)
-    // Refresh chart history every 5s (replace to avoid flat lines from repeated appends)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 120 }).then(r => { if (r?.length) setHistory(r) }).catch(() => {})
-    }, 5000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
+    return () => clearInterval(id)
   }, [isConnected])
 
   const aqi = latest?.aqi ?? null
@@ -76,7 +81,6 @@ export default function EnvironmentalIntelligence() {
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Ambient conditions and air quality monitoring</p>
       </div>
 
-      {/* AQI highlight */}
       <div className="card-elevated rounded-xl p-5" style={{ borderLeft: `4px solid ${aqiCat.color}` }}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -100,7 +104,6 @@ export default function EnvironmentalIntelligence() {
         )}
       </div>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <EnvStat icon={Thermometer} label="Ambient Temp" value={latest?.ambient_temperature != null ? fmt(latest.ambient_temperature) : null} unit="°C" warning={(latest?.ambient_temperature ?? 0) > 35} color="var(--accent-warning)" />
         <EnvStat icon={Droplets} label="Humidity" value={latest?.humidity != null ? fmt(latest.humidity, 0) : null} unit="%" warning={(latest?.humidity ?? 0) > 80} color="var(--accent-env)" />
@@ -108,7 +111,6 @@ export default function EnvironmentalIntelligence() {
         <EnvStat icon={AlertTriangle} label="PM2.5" value={latest?.pm25 != null ? fmt(latest.pm25) : null} unit="µg/m³" warning={(latest?.pm25 ?? 0) > 35} color="var(--accent-danger)" />
       </div>
 
-      {/* Trend charts */}
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
