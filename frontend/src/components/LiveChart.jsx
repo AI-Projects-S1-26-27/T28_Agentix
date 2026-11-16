@@ -19,10 +19,13 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function LiveChart({ signal, data = [], refLines = [] }) {
   const meta = SIGNAL_LABELS[signal] ?? { label: signal, unit: '', color: 'var(--accent-primary)' }
+  // Signals that are physically non-negative — clamp domain floor to 0
+  const NON_NEGATIVE = new Set(['aqi', 'pm25', 'humidity', 'spo2', 'heart_rate', 'activity_level', 'eda'])
   const values = data.map(d => d[signal]).filter(v => v != null)
   const min = values.length ? Math.min(...values) : 0
   const max = values.length ? Math.max(...values) : 100
   const pad = (max - min) * 0.15 || 5
+  const domainMin = NON_NEGATIVE.has(signal) ? Math.max(0, min - pad) : min - pad
 
   return (
     <div className="card rounded-xl p-4" style={{ minHeight: 180 }}>
@@ -46,7 +49,7 @@ export default function LiveChart({ signal, data = [], refLines = [] }) {
             interval="preserveStartEnd"
           />
           <YAxis
-            domain={[min - pad, max + pad]}
+            domain={[domainMin, max + pad]}
             tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
             axisLine={false}
             tickLine={false}
