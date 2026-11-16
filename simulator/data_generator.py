@@ -36,4 +36,5 @@ def generate_data(
         "humidity": round(random_value(ranges["humidity"], generator), 1),
         "aqi": round(random_value(ranges["aqi"], generator)),
         "pm25": round(random_value(ranges["pm25"], generator), 1),
+        "eda": round(random_value(ranges["eda"], generator), 2),
     }

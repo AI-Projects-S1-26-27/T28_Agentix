@@ -18,7 +18,6 @@ export const api = {
   risks: {
     latest: () => request('GET', '/risks/latest'),
     recent: (limit = 50) => request('GET', `/risks/recent?limit=${limit}`),
-    history: (params = {}) => request('GET', `/risks/recent?limit=${params.limit ?? 20}`),
     evaluate: (body) => request('POST', '/risks/evaluate', body),
   },
   alerts: {

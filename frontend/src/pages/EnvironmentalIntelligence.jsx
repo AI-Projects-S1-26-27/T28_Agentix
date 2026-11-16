@@ -32,7 +32,7 @@ function EnvStat({ icon: Icon, label, value, unit, warning, color }) {
 }
 
 export default function EnvironmentalIntelligence() {
-  const { isConnected, latestReading } = useConnection()
+  const { latestReading } = useConnection()
   const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.envHistory)
 
@@ -52,26 +52,12 @@ export default function EnvironmentalIntelligence() {
     }
     if (store.envHistory.length === 0) {
       api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.envHistory = r; setHistory(r) } })
+        .then(r => { if (r?.length) { store.envHistory = r.slice().reverse(); setHistory(store.envHistory) } })
         .catch(() => {})
     }
   }, [])
 
-  // Polling fallback when disconnected
-  useEffect(() => {
-    if (isConnected) return
-    const latestId = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
-        .catch(() => {})
-    }, 2000)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.envHistory = r; setHistory(r) } })
-        .catch(() => {})
-    }, 3000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected])
+  // App-level polling (App.jsx) handles WS-down fallback.
 
   const aqi    = latest?.aqi ?? null
   const aqiCat = aqiCategory(aqi ?? 0)
