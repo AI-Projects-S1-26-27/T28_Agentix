@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import RiskCard from '../components/RiskCard'
-import useWebSocket from '../hooks/useWebSocket'
+import { useWebSocket } from '../hooks/useWebSocket'
 import { api } from '../services/api'
 import { getRiskMeta, fmtRelative, fmtTime } from '../utils/formatters'
 import { Brain, ChevronRight, Shield } from 'lucide-react'
