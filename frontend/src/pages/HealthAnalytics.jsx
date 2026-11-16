@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import LiveChart from '../components/LiveChart'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
 import { fmt, fmtRelative, SIGNAL_LABELS } from '../utils/formatters'
 import { HeartPulse, TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -38,6 +39,7 @@ function getTrend(arr, key) {
 export default function HealthAnalytics() {
   const [latest, setLatest] = useState(null)
   const [history, setHistory] = useState([])
+  const { isConnected } = useConnection()
 
   const handleReading = useCallback((data) => {
     setLatest(data)
@@ -46,9 +48,22 @@ export default function HealthAnalytics() {
 
   useWebSocket(handleReading)
 
+  // Initial load
   useEffect(() => {
+    api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
     api.history.readings({ limit: 120 }).then(r => setHistory(r ?? [])).catch(() => {})
   }, [])
+
+  // REST fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) return
+    const id = setInterval(() => {
+      api.readings.latest()
+        .then(r => { if (r?.reading) { setLatest(r.reading); setHistory(prev => [...prev, { ...r.reading }].slice(-120)) } })
+        .catch(() => {})
+    }, 2000)
+    return () => clearInterval(id)
+  }, [isConnected])
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
 

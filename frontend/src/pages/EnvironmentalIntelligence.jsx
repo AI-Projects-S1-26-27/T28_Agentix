@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import LiveChart from '../components/LiveChart'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
 import { fmt, aqiCategory, SIGNAL_LABELS } from '../utils/formatters'
 import { Wind, Thermometer, Droplets, AlertTriangle } from 'lucide-react'
@@ -23,7 +24,7 @@ function EnvStat({ icon: Icon, label, value, unit, warning, color }) {
         {warning && <AlertTriangle size={12} style={{ color: 'var(--accent-warning)' }} className="ml-auto" />}
       </div>
       <div className="flex items-end gap-1">
-        <span className="text-2xl font-bold" style={{ color: color ?? 'var(--text-primary)' }}>{value}</span>
+        <span className="text-2xl font-bold" style={{ color: color ?? 'var(--text-primary)' }}>{value ?? '—'}</span>
         <span className="text-sm mb-0.5" style={{ color: 'var(--text-muted)' }}>{unit}</span>
       </div>
     </div>
@@ -33,6 +34,7 @@ function EnvStat({ icon: Icon, label, value, unit, warning, color }) {
 export default function EnvironmentalIntelligence() {
   const [latest, setLatest] = useState(null)
   const [history, setHistory] = useState([])
+  const { isConnected } = useConnection()
 
   const handleReading = useCallback((data) => {
     setLatest(data)
@@ -41,12 +43,25 @@ export default function EnvironmentalIntelligence() {
 
   useWebSocket(handleReading)
 
+  // Initial load
   useEffect(() => {
+    api.readings.latest().then(r => { if (r?.reading) setLatest(r.reading) }).catch(() => {})
     api.history.readings({ limit: 120 }).then(r => setHistory(r ?? [])).catch(() => {})
   }, [])
 
-  const aqi = latest?.aqi ?? 0
-  const aqiCat = aqiCategory(aqi)
+  // REST fallback polling when WebSocket is disconnected
+  useEffect(() => {
+    if (isConnected) return
+    const id = setInterval(() => {
+      api.readings.latest()
+        .then(r => { if (r?.reading) { setLatest(r.reading); setHistory(prev => [...prev, { ...r.reading }].slice(-120)) } })
+        .catch(() => {})
+    }, 2000)
+    return () => clearInterval(id)
+  }, [isConnected])
+
+  const aqi = latest?.aqi ?? null
+  const aqiCat = aqiCategory(aqi ?? 0)
 
   return (
     <div className="space-y-6">
@@ -64,18 +79,18 @@ export default function EnvironmentalIntelligence() {
           <div>
             <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Air Quality Index</p>
             <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-bold" style={{ color: aqiCat.color }}>{fmt(aqi, 0)}</span>
-              <AqiBadge aqi={aqi} />
+              <span className="text-5xl font-bold" style={{ color: aqiCat.color }}>{aqi != null ? fmt(aqi, 0) : '—'}</span>
+              {aqi != null && <AqiBadge aqi={aqi} />}
             </div>
           </div>
           <div className="text-right">
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PM2.5</p>
             <p className="text-xl font-bold" style={{ color: (latest?.pm25 ?? 0) > 35 ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-              {fmt(latest?.pm25)} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>µg/m³</span>
+              {latest?.pm25 != null ? fmt(latest.pm25) : '—'} <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>µg/m³</span>
             </p>
           </div>
         </div>
-        {aqi > 100 && (
+        {aqi != null && aqi > 100 && (
           <p className="text-xs mt-3 p-2 rounded-lg" style={{ background: `color-mix(in srgb, ${aqiCat.color} 10%, var(--surface))`, color: 'var(--text-secondary)' }}>
             ⚠ Air quality is {aqiCat.label.toLowerCase()}. Limit outdoor exposure.
           </p>
@@ -84,10 +99,10 @@ export default function EnvironmentalIntelligence() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <EnvStat icon={Thermometer} label="Ambient Temp" value={fmt(latest?.ambient_temperature)} unit="°C" warning={(latest?.ambient_temperature ?? 0) > 35} color="var(--accent-warning)" />
-        <EnvStat icon={Droplets} label="Humidity" value={fmt(latest?.humidity, 0)} unit="%" warning={(latest?.humidity ?? 0) > 80} color="var(--accent-env)" />
-        <EnvStat icon={Wind} label="AQI" value={fmt(aqi, 0)} unit="" warning={aqi > 100} color={aqiCat.color} />
-        <EnvStat icon={AlertTriangle} label="PM2.5" value={fmt(latest?.pm25)} unit="µg/m³" warning={(latest?.pm25 ?? 0) > 35} color="var(--accent-danger)" />
+        <EnvStat icon={Thermometer} label="Ambient Temp" value={latest?.ambient_temperature != null ? fmt(latest.ambient_temperature) : null} unit="°C" warning={(latest?.ambient_temperature ?? 0) > 35} color="var(--accent-warning)" />
+        <EnvStat icon={Droplets} label="Humidity" value={latest?.humidity != null ? fmt(latest.humidity, 0) : null} unit="%" warning={(latest?.humidity ?? 0) > 80} color="var(--accent-env)" />
+        <EnvStat icon={Wind} label="AQI" value={aqi != null ? fmt(aqi, 0) : null} unit="" warning={(aqi ?? 0) > 100} color={aqiCat.color} />
+        <EnvStat icon={AlertTriangle} label="PM2.5" value={latest?.pm25 != null ? fmt(latest.pm25) : null} unit="µg/m³" warning={(latest?.pm25 ?? 0) > 35} color="var(--accent-danger)" />
       </div>
 
       {/* Trend charts */}
