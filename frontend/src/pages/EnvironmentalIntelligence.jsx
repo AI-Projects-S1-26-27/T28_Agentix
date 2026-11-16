@@ -113,10 +113,12 @@ export default function EnvironmentalIntelligence() {
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LiveChart signal="aqi"                 data={history} refLines={[{ value: 50, color: 'var(--accent-warning)' }, { value: 100, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="pm25"               data={history} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="ambient_temperature" data={history} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="humidity"            data={history} refLines={[{ value: 80, color: 'var(--accent-warning)' }]} />
+          {(() => { const w = history.slice(-30); return (<>
+          <LiveChart signal="aqi"                 data={w} refLines={[{ value: 50, color: 'var(--accent-warning)' }, { value: 100, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="pm25"               data={w} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="ambient_temperature" data={w} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="humidity"            data={w} refLines={[{ value: 80, color: 'var(--accent-warning)' }]} />
+          </>) })()}
         </div>
       </div>
     </div>

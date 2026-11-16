@@ -84,12 +84,14 @@ export default function Dashboard() {
           Live Signals
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <LiveChart signal="heart_rate"          data={history} refLines={[{ value: 100, color: 'var(--accent-warning)' }, { value: 50, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="spo2"                data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="body_temperature"    data={history} refLines={[{ value: 38, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="aqi"                 data={history} refLines={[{ value: 100, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="humidity"            data={history} />
-          <LiveChart signal="ambient_temperature" data={history} />
+          {(() => { const w = history.slice(-30); return (<>
+          <LiveChart signal="heart_rate"          data={w} refLines={[{ value: 100, color: 'var(--accent-warning)' }, { value: 50, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="spo2"                data={w} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="body_temperature"    data={w} refLines={[{ value: 38, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="aqi"                 data={w} refLines={[{ value: 100, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="humidity"            data={w} />
+          <LiveChart signal="ambient_temperature" data={w} />
+          </>) })()}
         </div>
       </div>
     </div>
