@@ -1,0 +1,157 @@
+{
+  "generated_at": "2026-11-17T20:43:43.615892+00:00",
+  "methodology_documentation": {
+    "window_aggregation_rule": "For reading-level personalized detectors evaluated on 60s windows, a window is classified as anomalous (1) if >= 50% of the 1 Hz readings within that window are flagged as overall anomalies (majority vote). The continuous score is the maximum absolute z-score across all physiological channels observed during that window.",
+    "alert_latency_policy": "Alert latency is measured as elapsed seconds from genuine stress onset (t=0) to the earliest timestamp of a flagged anomaly (1 Hz) or positive window (60s). If a detector fails to trigger any alert during the entire stress condition (missed detection), the latency is right-censored at the total duration of the stress evaluation period.",
+    "cross_validation_leakage_control": "For Strategy A and D, calibration windows are selected exclusively from the initial 70% baseline partition; held-out 30% baseline and stress observations are strictly excluded. For Random Forest (LOPO), training windows are constructed exclusively from the three other participants; the held-out test participant is completely unseen during model fitting."
+  },
+  "established_protocols_macro_summary": {
+    "Strategy A (Fixed Baseline)": {
+      "macro_precision": 0.9583,
+      "macro_precision_std": 0.0803,
+      "macro_recall": 0.834,
+      "macro_recall_std": 0.3321,
+      "macro_f1_score": 0.8531,
+      "macro_f1_score_std": 0.237,
+      "macro_accuracy": 0.86,
+      "macro_accuracy_std": 0.2036,
+      "macro_specificity": 0.9114,
+      "macro_specificity_std": 0.1716,
+      "macro_false_positive_rate": 0.0886,
+      "macro_false_positive_rate_std": 0.1716,
+      "macro_auroc": 0.9938,
+      "macro_auroc_std": 0.0125,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    },
+    "Strategy D (Personalized Quality-Gated)": {
+      "macro_precision": 0.953,
+      "macro_precision_std": 0.0773,
+      "macro_recall": 0.8894,
+      "macro_recall_std": 0.2211,
+      "macro_f1_score": 0.9037,
+      "macro_f1_score_std": 0.1309,
+      "macro_accuracy": 0.8927,
+      "macro_accuracy_std": 0.1324,
+      "macro_specificity": 0.9017,
+      "macro_specificity_std": 0.1659,
+      "macro_false_positive_rate": 0.0983,
+      "macro_false_positive_rate_std": 0.1659,
+      "macro_auroc": 0.9969,
+      "macro_auroc_std": 0.0062,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    },
+    "Fixed Population Threshold": {
+      "macro_precision": 0.5,
+      "macro_precision_std": 0.5774,
+      "macro_recall": 0.2222,
+      "macro_recall_std": 0.4119,
+      "macro_f1_score": 0.2517,
+      "macro_f1_score_std": 0.4427,
+      "macro_accuracy": 0.4995,
+      "macro_accuracy_std": 0.2643,
+      "macro_specificity": 1.0,
+      "macro_specificity_std": 0.0,
+      "macro_false_positive_rate": 0.0,
+      "macro_false_positive_rate_std": 0.0,
+      "macro_auroc": 0.7459,
+      "macro_auroc_std": 0.4973,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    },
+    "Random Forest (LOPO Windows)": {
+      "macro_precision": 0.533,
+      "macro_precision_std": 0.4219,
+      "macro_recall": 0.6375,
+      "macro_recall_std": 0.475,
+      "macro_f1_score": 0.5566,
+      "macro_f1_score_std": 0.4135,
+      "macro_accuracy": 0.7452,
+      "macro_accuracy_std": 0.188,
+      "macro_specificity": 0.7982,
+      "macro_specificity_std": 0.322,
+      "macro_false_positive_rate": 0.2018,
+      "macro_false_positive_rate_std": 0.322,
+      "macro_auroc": 0.8333,
+      "macro_auroc_std": 0.1224,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    }
+  },
+  "common_heldout_subset_macro_summary": {
+    "Strategy A (Common Windows)": {
+      "macro_precision": 0.9659,
+      "macro_precision_std": 0.0682,
+      "macro_recall": 0.825,
+      "macro_recall_std": 0.35,
+      "macro_f1_score": 0.8471,
+      "macro_f1_score_std": 0.2594,
+      "macro_accuracy": 0.8575,
+      "macro_accuracy_std": 0.2215,
+      "macro_specificity": 0.925,
+      "macro_specificity_std": 0.15,
+      "macro_false_positive_rate": 0.075,
+      "macro_false_positive_rate_std": 0.15,
+      "macro_auroc": 0.995,
+      "macro_auroc_std": 0.01,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    },
+    "Strategy D (Common Windows)": {
+      "macro_precision": 0.9659,
+      "macro_precision_std": 0.0682,
+      "macro_recall": 0.9,
+      "macro_recall_std": 0.2,
+      "macro_f1_score": 0.9192,
+      "macro_f1_score_std": 0.118,
+      "macro_accuracy": 0.9075,
+      "macro_accuracy_std": 0.1259,
+      "macro_specificity": 0.925,
+      "macro_specificity_std": 0.15,
+      "macro_false_positive_rate": 0.075,
+      "macro_false_positive_rate_std": 0.15,
+      "macro_auroc": 1.0,
+      "macro_auroc_std": 0.0,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    },
+    "Random Forest (Common Windows)": {
+      "macro_precision": 0.7065,
+      "macro_precision_std": 0.4728,
+      "macro_recall": 0.6375,
+      "macro_recall_std": 0.475,
+      "macro_f1_score": 0.66,
+      "macro_f1_score_std": 0.461,
+      "macro_accuracy": 0.7389,
+      "macro_accuracy_std": 0.2972,
+      "macro_specificity": 0.9273,
+      "macro_specificity_std": 0.0951,
+      "macro_false_positive_rate": 0.0727,
+      "macro_false_positive_rate_std": 0.0951,
+      "macro_auroc": 0.8717,
+      "macro_auroc_std": 0.1552,
+      "std_convention": "sample_standard_deviation_ddof_1"
+    }
+  },
+  "detection_latencies_seconds": {
+    "Strategy A (Baseline)": {
+      "S2": 0.0,
+      "S3": 419.0,
+      "S4": 0.0,
+      "S5": 0.0
+    },
+    "Strategy D (Personalized)": {
+      "S2": 0.0,
+      "S3": 188.0,
+      "S4": 0.0,
+      "S5": 0.0
+    },
+    "Population Threshold": {
+      "S2": 615.0,
+      "S3": 103.0,
+      "S4": 635.0,
+      "S5": 497.0
+    },
+    "Random Forest (LOPO)": {
+      "S2": 570.0,
+      "S3": 0.0,
+      "S4": 0.0,
+      "S5": 30.0
+    }
+  }
+}
