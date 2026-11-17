@@ -1,7 +1,42 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, StrictInt
+
+try:
+    from pydantic import field_validator
+
+    def _validate_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamp must include a timezone offset")
+        return value
+
+    def _validate_non_blank_text(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not value.strip():
+            raise ValueError("text fields must not be blank")
+        return value
+
+    _TIMESTAMP_VALIDATOR = field_validator("timestamp")(_validate_timestamp)
+    _TEXT_VALIDATOR = field_validator(
+        "source", "scenario", "participant_id"
+    )(_validate_non_blank_text)
+except ImportError:
+    from pydantic import validator
+
+    def _validate_timestamp(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamp must include a timezone offset")
+        return value
+
+    def _validate_non_blank_text(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not value.strip():
+            raise ValueError("text fields must not be blank")
+        return value
+
+    _TIMESTAMP_VALIDATOR = validator("timestamp", allow_reuse=True)(_validate_timestamp)
+    _TEXT_VALIDATOR = validator(
+        "source", "scenario", "participant_id", allow_reuse=True
+    )(_validate_non_blank_text)
 
 
 class Measurement(BaseModel):
@@ -10,6 +45,12 @@ class Measurement(BaseModel):
     timestamp: datetime
     source: str = Field(..., min_length=1, max_length=64)
     scenario: Optional[str] = Field(default=None, max_length=64)
+    participant_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    protocol_label: Optional[StrictInt] = Field(
+        default=None,
+        ge=0,
+        description="WESAD experimental protocol label, not a health-risk label",
+    )
     heart_rate: Optional[float] = Field(default=None, ge=0, le=300)
     spo2: Optional[float] = Field(default=None, ge=0, le=100)
     body_temperature: Optional[float] = Field(default=None, ge=25, le=45)
@@ -18,26 +59,26 @@ class Measurement(BaseModel):
     humidity: Optional[float] = Field(default=None, ge=0, le=100)
     aqi: Optional[float] = Field(default=None, ge=0, le=1000)
     pm25: Optional[float] = Field(default=None, ge=0, le=1000)
+    eda: Optional[float] = Field(default=None, ge=0, le=100)
 
-    @validator("timestamp")
-    def timestamp_must_be_timezone_aware(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("timestamp must include a timezone offset")
-        return value
+    # Apply validators
+    _val_ts = _TIMESTAMP_VALIDATOR
+    _val_txt = _TEXT_VALIDATOR
 
-    @validator("source", "scenario")
-    def text_must_not_be_blank(cls, value: Optional[str]) -> Optional[str]:
-        if value is not None and not value.strip():
-            raise ValueError("text fields must not be blank")
-        return value
+    def to_dict(self) -> Dict[str, Any]:
+        if hasattr(self, "model_dump"):
+            return self.model_dump()
+        return self.dict()
 
     def as_storage_tuple(self) -> tuple:
-        values = self.dict()
+        values = self.to_dict()
         timestamp = values["timestamp"].astimezone(timezone.utc).isoformat()
         return (
             timestamp,
             values["source"],
             values["scenario"],
+            values["participant_id"],
+            values["protocol_label"],
             values["heart_rate"],
             values["spo2"],
             values["body_temperature"],
@@ -46,6 +87,7 @@ class Measurement(BaseModel):
             values["humidity"],
             values["aqi"],
             values["pm25"],
+            values.get("eda"),
         )
 
 
