@@ -1,155 +1,150 @@
 # Backend Progress
 
-**Owner:** Vedant Nichal
-**Scope:** Backend, shared data interface, persistence, and streaming
-**Status:** Backend foundation complete; cross-module integration is ready to begin.
+**Owner:** Vedant Nichal  
+**Scope:** Backend architecture, data interfaces, persistence, service layer, REST APIs, and live WebSocket streaming  
+**Status:** Complete backend implementation and cross-module integration verified end-to-end.
 
-## Completed
+---
 
-### Shared measurement contract
+## 1. Architecture Overview
 
-Implemented in [backend/models/measurement.py](backend/models/measurement.py):
-
-- timezone-aware `timestamp`;
-- UTC normalization before persistence;
-- required `source` provenance;
-- optional scenario and sensor/context fields;
-- range validation for physiological and environmental values;
-- explicit `null` values for unavailable measurements.
-
-The current fields are:
+The HealthSensing backend provides a local-first, privacy-preserving ingestion, persistence, and early-warning delivery pipeline. It bridges sensor ingestion (wearables and Python simulator), multimodal AI baseline and anomaly detection, explicit contextual rule evaluation, and the real-time React dashboard.
 
 ```text
-timestamp, source, scenario, heart_rate, spo2, body_temperature,
-activity_level, ambient_temperature, humidity, aqi, pm25
+[Wearables / Simulator]
+          │ (HTTP POST /api/readings)
+          ▼
+   [DataService Ingestion]
+   ├── 1. SQLite Persistence (`measurements` table)
+   ├── 2. Multimodal Risk Screening (`RiskService` + `risk_engine`)
+   ├── 3. Derived Risk Persistence (`risk_assessments` table)
+   ├── 4. Proactive Alert Generation & Deduplication (`AlertService` -> `alerts` table)
+   └── 5. Live WebSocket Broadcast (`/ws/readings`, `/ws/events`)
+          │
+          ▼
+   [React Dashboard & UI Clients]
 ```
 
-### Local persistence
+---
 
-Implemented in [backend/db/database.py](backend/db/database.py):
+## 2. Completed Deliverables
 
-- SQLite database initialization;
-- `measurements` table and timestamp index;
-- insert and recent-reading retrieval;
-- newest-first ordering;
-- configurable local path through `HEALTHSENSING_DATABASE_PATH`.
+### 2.1 Shared Data Models & Validations
+Implemented in [backend/models/](backend/models/):
 
-The default database is `data/healthsensing.sqlite3`, which is ignored by Git.
+- `Measurement`: Timezone-aware UTC timestamp, source provenance, optional participant ID and experimental protocol label, physiological metrics (`heart_rate`, `spo2`, `body_temperature`, `activity_level`, `eda`), and environmental conditions (`ambient_temperature`, `humidity`, `aqi`, `pm25`). Full validation with explicit `null` support for unobserved channels.
+- `RiskAssessment` & `RiskComponent`: Multimodal risk status (`low`, `moderate`, `high`, `very_high`, `severe`), numerical severity levels (0–4), contributing signals, unassessed inputs, and human-interpretable explanations.
+- `Alert`: Triggered warnings and critical notifications with deduplication, categories (`heat_stress`, `air_quality`, `physiological`, `multimodal`), and user acknowledgment tracking.
+- `ScenarioInfo`, `ScenarioRunRequest`, `ScenarioRunResponse`: Definitions and parameter ranges for simulator scenarios (`normal`, `heatwave`, `pollution`, `fatigue`).
 
-### HTTP API
+### 2.2 Local SQLite Persistence
+Implemented in [backend/db/database.py](backend/db/database.py) and [backend/db/schema.py](backend/db/schema.py):
 
-Implemented in [backend/main.py](backend/main.py) and
-[backend/api/routes/current.py](backend/api/routes/current.py):
+| Table | Purpose | Key Indexes |
+|---|---|---|
+| `measurements` | Time-series sensor and environmental observations | `idx_measurements_timestamp` |
+| `risk_assessments` | Persisted risk screening evaluations linked to readings | `idx_risk_timestamp`, `idx_risk_reading_id` |
+| `alerts` | Actionable risk alerts with acknowledgment flags | `idx_alerts_timestamp`, `idx_alerts_acknowledged` |
+| `personal_baselines` | User-calibrated baseline statistics (mean, std, stability) | `UNIQUE(participant_id, signal)` |
 
-| Method | Route | Purpose |
+Configurable via `HEALTHSENSING_DATABASE_PATH` (defaults to local `data/healthsensing.sqlite3`).
+
+### 2.3 Service Layer
+Implemented in [backend/services/](backend/services/):
+
+- **`RiskService`**: Combines environmental screening (heat index calculation and AQI categorization via `risk_engine`) with physiological indicators. It also records personalized anomaly screening against a stable participant baseline in the risk components; an anomaly alone does not trigger a health alert.
+- **`AlertService`**: Automatically produces alerts for high-risk conditions (`severity >= 2`), implements rate limiting and 30-second category deduplication, and handles acknowledgment lifecycle.
+- **`DataService`**: Central orchestrator coordinating database writes, risk evaluation, alert generation, and WebSocket broadcast in a single transactional step.
+
+### 2.4 REST API Endpoints
+Implemented in [backend/api/routes/](backend/api/routes/) and registered in [backend/main.py](backend/main.py):
+
+| Method | Route | Description |
 |---|---|---|
 | `GET` | `/health` | Service health check |
-| `POST` | `/api/readings` | Validate and persist one reading |
-| `GET` | `/api/readings?limit=50` | Retrieve recent readings |
+| `POST` | `/api/readings` | Ingests a new reading, processes risk & alerts, broadcasts live |
+| `GET` | `/api/readings` | Retrieves recent historical readings (with limit parameter) |
+| `GET` | `/api/readings/latest` | Returns latest reading with associated risk and active alerts |
+| `GET` | `/api/risks/recent` | Retrieves recent risk assessment records |
+| `GET` | `/api/risks/latest` | Returns latest risk evaluation status |
+| `POST` | `/api/risks/evaluate` | On-demand risk assessment without persistence |
+| `GET` | `/api/alerts` | Lists recent alerts with optional `unacknowledged_only` filter |
+| `GET` | `/api/alerts/active` | Lists unacknowledged active alerts |
+| `POST` | `/api/alerts/{id}/acknowledge` | Marks an alert as acknowledged |
+| `GET` | `/api/history/readings` | Historical query with `start`, `end`, `limit`, `offset` |
+| `GET` | `/api/history/risks` | Historical query of past risk states |
+| `GET` | `/api/history/stats` | Aggregate dataset statistics (averages, mins, maxs) |
+| `GET` | `/api/baseline` | Retrieves personal baseline parameters for a participant |
+| `POST` | `/api/baseline/calibrate` | Upserts calibrated baseline statistics |
+| `GET` | `/api/scenarios` | Lists available simulator scenarios and parameter bounds |
+| `POST` | `/api/scenarios/run` | Triggers a simulated run of generated data into the backend |
+| `GET` | `/api/settings` | Returns system operational status and local configuration |
+| `PATCH` | `/api/settings` | Updates runtime thresholds and preferences |
 
-Invalid timestamps, blank provenance, out-of-range values, and invalid limits
-are rejected by the API.
+### 2.5 Real-Time WebSocket Streaming
+Implemented in [backend/websocket/](backend/websocket/):
 
-### WebSocket streaming
+- Multi-endpoint streaming on `/ws/readings` and `/ws/events`.
+- Typed event architecture: `reading_processed`, `ping`/`pong`, `status_response`.
+- Backward compatibility: broadcast payloads contain both nested event objects and root measurement attributes for earlier client builds.
+- Connection tracking and client disconnection isolation.
 
-Implemented in [backend/websocket/live_stream.py](backend/websocket/live_stream.py)
-and [backend/websocket/manager.py](backend/websocket/manager.py):
+---
 
-- dashboard clients connect to `/ws/readings`;
-- readings are broadcast only after successful persistence;
-- disconnected clients are removed;
-- send failures are isolated to the affected client.
+## 3. Verification & Test Suite
 
-### Simulator integration
+The test suite covers database persistence, schema validation, service coordination, API routing, WebSocket lifecycle, and end-to-end system flow:
 
-Implemented in [simulator/data_generator.py](simulator/data_generator.py),
-[simulator/simulator.py](simulator/simulator.py), and
-[simulator/client.py](simulator/client.py):
+- [tests/test_backend.py](tests/test_backend.py): Schema validation, range constraints, SQLite repository operations, alerts, and baselines.
+- [tests/test_services.py](tests/test_services.py): `RiskService` physiological fusion, `AlertService` triggering, and `DataService` ingestion pipeline.
+- [tests/test_api.py](tests/test_api.py): Ingestion, latest summary, risks, alerts, history, baseline calibration, and scenario endpoints.
+- [tests/test_websocket_protocol.py](tests/test_websocket_protocol.py): Bidirectional communication, `ping`/`pong` heartbeats, and broadcast delivery.
+- [tests/test_e2e_integration.py](tests/test_e2e_integration.py): Full vertical slice from scenario generation to persistence, risk screening, alert triggering, and acknowledgment.
+- [tests/test_simulator_contract.py](tests/test_simulator_contract.py): Verification of simulator records against backend ingestion contracts.
+- [tests/test_risk_engine.py](tests/test_risk_engine.py): Heat index calculation, AQI categorization, and explanation generation.
 
-- generated records match the backend contract;
-- timestamps include timezone information;
-- records are marked with `source: "simulator"`;
-- finite runs are available for integration tests;
-- continuous runs remain available for demonstrations;
-- the standard-library client submits readings to the local API and reports
-  HTTP/network failures explicitly.
+To run tests:
 
-Example:
-
-```python
-from simulator.simulator import run_simulator
-
-run_simulator(
-    "heatwave",
-    count=10,
-    endpoint="http://127.0.0.1:8000/api/readings",
-)
+```bash
+python -m pytest -q
 ```
 
-## Tests and validation
+Latest local validation: 221 passed. One existing Starlette deprecation warning remains for `httpx` in `TestClient`.
 
-Focused tests are available in:
+---
 
-- [tests/test_backend.py](tests/test_backend.py)
-- [tests/test_api.py](tests/test_api.py)
-- [tests/test_simulator_contract.py](tests/test_simulator_contract.py)
+## 4. Integration Matrix for Team Members
 
-They cover schema validation, optional values, SQLite persistence, ordering,
-HTTP ingestion/retrieval, invalid input, finite simulator runs, and WebSocket
-delivery.
+- **Animish Kumar (Person 3 - Primary AI/ML Pipeline):**
+  - Baseline parameters generated from resting history can be stored and queried via `POST /api/baseline/calibrate` and `GET /api/baseline`.
+  - ML inference responses from `ai/interfaces/` map directly into the reading and risk payloads.
+- **Avani Asati (Person 5 - Knowledge Base & Risk Fusion):**
+  - Environmental risk functions from `risk_engine/` are integrated into `RiskService`.
+  - Multimodal rules combine environmental context (heat/AQI) with physiological strain (elevated HR, SpO₂ desaturation) into explainable states.
+- **Chaitanya Chalith (Person 7 - React Dashboard):**
+  - Dashboard can subscribe to `ws://127.0.0.1:8000/ws/readings` or `ws://127.0.0.1:8000/ws/events`.
+  - Overview cards and live charts can consume `GET /api/readings/latest`, `GET /api/risks/latest`, `GET /api/alerts/active`, and historical series at `GET /api/history/readings`.
+  - Alert acknowledgment is wired to `POST /api/alerts/{id}/acknowledge`.
+- **Aryan Saini (Person 2 - Simulator):**
+  - The simulator can stream data to `POST /api/readings` or trigger controlled scenario bursts using `POST /api/scenarios/run` with `heatwave`, `pollution`, `fatigue`, or `normal`.
+- **Kartikeya Singh & Siddhartha Venkata Arava Reddy (Data & Evaluation):**
+  - `data/src/replay_wesad_to_backend.py` calibrates each participant from the first 70% of WESAD baseline-label (`1`) rows, then replays later rows through `POST /api/readings`.
+  - Participant IDs and original protocol labels are preserved. Personalized anomaly results are saved under `components.personalized_anomaly`; protocol labels are not treated as health-risk ground truth.
 
-`git diff --check` passes. The test suite has not run in the current
-environment because an installed Python/pytest runtime is unavailable; only
-the Microsoft Store Python alias is present.
+---
 
-## Integration contract for the team
+## 5. Local Running Instructions
 
-- **Animish Kumar:** provide anomaly/baseline outputs for each accepted
-  reading. Suggested fields: `anomaly_score`, detector/model name, and
-  prediction availability.
-- **Avani Asati:** provide risk-fusion output and explanation structure.
-  Suggested fields: risk category, severity, triggered rules, contributing
-  signals, unavailable inputs, and human-readable explanation.
-- **Chaitanya Chalith:** consume `GET /api/readings` for current/history
-  views and `/ws/readings` for live updates. Simulated records are identified
-  by `source: "simulator"`.
-- **Kartikeya Singh:** send cleaned data using the shared measurement fields
-  and preserve source/session provenance. Missing fields should remain `null`.
-- **Siddhartha Venkata Arava Reddy:** use the same schema when evaluating
-  detectors and keep experiment/test-set data separate from simulator
-  integration data.
-- **Aryan Saini:** use the simulator client or submit generated records to
-  `POST /api/readings`; keep simulated data labelled as simulated.
-
-## Remaining work
-
-### Waiting for other modules
-
-1. Add AI anomaly and personal-baseline fields after Animish provides the
-   detector interface.
-2. Add risk levels, triggered rules, and explanations after Avani provides the
-   reasoning/risk-fusion interface.
-3. Add dataset-backed evaluation after Kartikeya provides the data inventory
-   and Siddhartha provides the evaluation protocol.
-4. Connect dashboard cards and charts after Chaitanya confirms the frontend
-   API/WebSocket consumption shape.
-
-### Backend-owned follow-up after those interfaces exist
-
-1. Extend the persisted schema for derived anomaly/risk results.
-2. Add a service layer that calls detector and risk modules.
-3. Add historical risk and alert endpoints.
-4. Add WebSocket event types for readings, risk updates, and alerts.
-5. Add end-to-end tests across simulator, backend, AI, reasoning, and
-   dashboard consumers.
-
-## Run locally
-
-Install [requirements.txt](requirements.txt), then run:
-
-```text
-uvicorn backend.main:app --reload
-```
-
-Do not commit private wearable exports, raw personal health data, secrets, or
-unverified medical claims.
+1. Install backend requirements:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+2. Start the FastAPI development server:
+   ```bash
+   uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+3. Interactive OpenAPI documentation is accessible at `http://127.0.0.1:8000/docs`.
+4. Trigger a simulated scenario burst:
+   ```bash
+   curl -X POST "http://127.0.0.1:8000/api/scenarios/run" -H "Content-Type: application/json" -d "{\"scenario_id\": \"heatwave\", \"count\": 10}"
+   ```
