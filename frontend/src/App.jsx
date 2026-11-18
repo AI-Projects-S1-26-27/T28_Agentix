@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { ConnectionProvider, useConnection } from './context/ConnectionContext'
@@ -10,6 +10,7 @@ import EnvironmentalIntelligence from './pages/EnvironmentalIntelligence'
 import AIRiskAnalysis from './pages/AIRiskAnalysis'
 import Alerts from './pages/Alerts'
 import UserContext from './pages/UserContext'
+import Login from './pages/Login'
 import store from './services/dataStore'
 
 function AppRoutes() {
@@ -40,11 +41,24 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(
+    () => sessionStorage.getItem('hs_auth') === '1'
+  )
+
+  function handleLogin() {
+    sessionStorage.setItem('hs_auth', '1')
+    setLoggedIn(true)
+  }
+
   return (
     <ThemeProvider>
-      <ConnectionProvider>
-        <AppRoutes />
-      </ConnectionProvider>
+      {loggedIn ? (
+        <ConnectionProvider>
+          <AppRoutes />
+        </ConnectionProvider>
+      ) : (
+        <Login onLogin={handleLogin} />
+      )}
     </ThemeProvider>
   )
 }
