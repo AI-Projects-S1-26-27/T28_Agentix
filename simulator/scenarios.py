@@ -11,7 +11,8 @@ SCENARIOS = {
         "ambient_temperature": (25, 32),
         "humidity": (40, 70),
         "aqi": (40, 100),
-        "pm25": (10, 50)
+        "pm25": (10, 50),
+        "eda": (1.0, 5.0),
     },
 
     "heatwave": {
@@ -22,7 +23,8 @@ SCENARIOS = {
         "ambient_temperature": (36, 45),
         "humidity": (60, 90),
         "aqi": (50, 120),
-        "pm25": (15, 60)
+        "pm25": (15, 60),
+        "eda": (5.0, 15.0),
     },
 
     "pollution": {
@@ -33,7 +35,8 @@ SCENARIOS = {
         "ambient_temperature": (25, 32),
         "humidity": (40, 75),
         "aqi": (150, 350),
-        "pm25": (80, 250)
+        "pm25": (80, 250),
+        "eda": (3.0, 10.0),
     },
 
     "fatigue": {
@@ -44,6 +47,7 @@ SCENARIOS = {
         "ambient_temperature": (25, 32),
         "humidity": (40, 70),
         "aqi": (40, 100),
-        "pm25": (10, 50)
+        "pm25": (10, 50),
+        "eda": (0.5, 3.0),
     }
 }
