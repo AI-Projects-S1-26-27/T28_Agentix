@@ -5,6 +5,7 @@ import { api } from '../services/api'
 import store from '../services/dataStore'
 import { fmt, fmtRelative, SIGNAL_LABELS } from '../utils/formatters'
 import { HeartPulse, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import contextStore from '../services/contextStore'
 
 function StatTile({ label, value, unit, trend, color }) {
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
@@ -40,6 +41,13 @@ export default function HealthAnalytics() {
   const { latestReading } = useConnection()
   const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.history)
+  const [activeCtx, setActiveCtx] = useState(contextStore.flags)
+
+  useEffect(() => {
+    const sync = () => setActiveCtx([...contextStore.flags])
+    window.addEventListener('focus', sync)
+    return () => window.removeEventListener('focus', sync)
+  }, [])
 
   // Real-time updates from app-level WebSocket
   useEffect(() => {
@@ -95,9 +103,9 @@ export default function HealthAnalytics() {
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(() => { const w = history.slice(-30); return (<>
-          <LiveChart signal="heart_rate"       data={w} refLines={[{ value: 100 }, { value: 50 }]} />
-          <LiveChart signal="body_temperature" data={w} refLines={[{ value: 38 }, { value: 35 }]} />
-          <LiveChart signal="eda"              data={w} />
+          <LiveChart signal="heart_rate"       data={w} refLines={contextStore.refLines('heart_rate')} />
+          <LiveChart signal="body_temperature" data={w} refLines={contextStore.refLines('body_temperature')} />
+          <LiveChart signal="eda"              data={w} refLines={contextStore.refLines('eda')} />
           </>) })()}
         </div>
       </div>
