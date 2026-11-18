@@ -1,6 +1,11 @@
-// Use Vite's proxy (/ws → ws://localhost:8080) so this works in both dev and prod
-const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws/readings`
+// Connect to Vite proxy (/ws) in dev, or directly to Render in production
+const isLocal =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+
+const WS_URL = isLocal
+  ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/readings`
+  : 'wss://healthsensing.onrender.com/ws/readings'
 
 const RECONNECT_DELAY_MS = 3000
 const HEARTBEAT_INTERVAL_MS = 20000
