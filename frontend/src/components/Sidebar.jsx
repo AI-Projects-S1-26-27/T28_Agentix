@@ -5,6 +5,7 @@ import {
   Wind,
   Brain,
   BellRing,
+  SlidersHorizontal,
   X,
 } from 'lucide-react'
 
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { to: '/environment', label: 'Environment',    Icon: Wind },
   { to: '/risk',        label: 'Risk Analysis',  Icon: Brain },
   { to: '/alerts',      label: 'Alerts',         Icon: BellRing },
+  { to: '/context',     label: 'My Context',     Icon: SlidersHorizontal },
 ]
 
 export default function Sidebar({ open, onClose }) {
