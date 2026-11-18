@@ -6,6 +6,7 @@ from backend.db.database import MeasurementRepository
 from backend.models.measurement import Measurement
 from backend.models.risk import RiskAssessment
 from risk_engine.risk_fusion import evaluate_environmental_risk
+from risk_engine.risk_levels import classify_eda
 
 PERSONAL_ANOMALY_THRESHOLD = 3.0
 PERSONAL_ANOMALY_SIGNALS = {
@@ -39,28 +40,28 @@ class RiskService:
         base_severity = env_result.get("severity") or 0
         base_risk_level = env_result.get("risk_level", "unknown")
 
-        # 2. Extract physiological signals
+        # 2. Extract physiological signals we actually have (WESAD dataset)
+        # spo2 is NOT in our datasets — omitted entirely
         hr = data.get("heart_rate")
-        spo2 = data.get("spo2")
         temp = data.get("body_temperature")
+        eda = data.get("eda")
+        protocol_label = data.get("protocol_label")  # WESAD: 2 = stress protocol
         activity = data.get("activity_level")
-        aqi = data.get("aqi")
         pm25 = data.get("pm25")
 
         phys_components: Dict[str, Any] = {}
         cross_modal_escalation = False
         escalation_reasons: List[str] = []
 
-        # Check unavailable physiological signals
+        # Check unavailable physiological signals (only ones we can have)
         if hr is None:
             unavailable_inputs.append("heart_rate")
-        if spo2 is None:
-            unavailable_inputs.append("spo2")
         if temp is None:
             unavailable_inputs.append("body_temperature")
+        if eda is None:
+            unavailable_inputs.append("eda")
 
         # 3. Multimodal rule: Heat Stress
-        # Elevated heat index + elevated heart rate / body temperature
         heat_comp = components.get("heat")
         if heat_comp and heat_comp.get("severity", 0) >= 1:
             contributing_signals.append("ambient_temperature")
@@ -78,19 +79,7 @@ class RiskService:
                     f"elevated skin temperature ({temp:.1f} °C) during heat stress"
                 )
 
-        # 4. Multimodal rule: Respiratory Stress
-        # High AQI/PM2.5 + decreased SpO2
-        aqi_comp = components.get("air_quality")
-        if aqi_comp and aqi_comp.get("severity", 0) >= 1:
-            contributing_signals.append("aqi")
-            if spo2 is not None and spo2 < 95.0:
-                cross_modal_escalation = True
-                contributing_signals.append("spo2")
-                escalation_reasons.append(
-                    f"decreased oxygen saturation ({spo2:.0f}%) in degraded air quality"
-                )
-
-        # 5. Physiological baseline & extreme vitals screening
+        # 4. Physiological baseline & extreme vitals screening
         if hr is not None:
             if hr > 130 or hr < 45:
                 phys_components["heart_rate"] = {
@@ -111,16 +100,6 @@ class RiskService:
                 if "heart_rate" not in contributing_signals:
                     contributing_signals.append("heart_rate")
 
-        if spo2 is not None and spo2 < 90.0:
-            phys_components["respiratory"] = {
-                "risk_level": "severe",
-                "severity": 4,
-                "value": spo2,
-                "condition": "hypoxemia",
-            }
-            contributing_signals.append("spo2")
-            escalation_reasons.append(f"critically low SpO2 ({spo2:.0f}%)")
-
         if temp is not None and (temp > 38.5 or temp < 34.0):
             phys_components["temperature"] = {
                 "risk_level": "high",
@@ -131,12 +110,40 @@ class RiskService:
             contributing_signals.append("body_temperature")
             escalation_reasons.append(f"abnormal body temperature ({temp:.1f} °C)")
 
+        # EDA (electrodermal activity) stress proxy
+        if eda is not None:
+            eda_result = classify_eda(eda)
+            if eda_result.get("severity", 0) > 0:
+                phys_components["eda"] = eda_result
+                contributing_signals.append("eda")
+                if eda_result["severity"] >= 2:
+                    escalation_reasons.append(
+                        f"high skin conductance ({eda:.1f} µS) — stress response"
+                    )
+
+        # stress_label from WESAD ground truth (2 = stress protocol)
+        if protocol_label is not None:
+            try:
+                label = int(protocol_label)
+            except (ValueError, TypeError):
+                label = None
+            if label == 2:
+                cross_modal_escalation = True
+                contributing_signals.append("protocol_label")
+                escalation_reasons.append("WESAD stress protocol active (label=2)")
+                phys_components["stress_protocol"] = {
+                    "risk_level": "high",
+                    "severity": 2,
+                    "value": label,
+                    "condition": "stress_protocol",
+                }
+
         if phys_components:
             components["physiological"] = phys_components
 
         components["personalized_anomaly"] = self._evaluate_personalized_anomaly(data)
 
-        # 6. Fuse final severity and risk level
+        # 5. Fuse final severity and risk level
         final_severity = base_severity
         for p in phys_components.values():
             if p.get("severity", 0) > final_severity:
@@ -154,7 +161,7 @@ class RiskService:
         }
         final_risk_level = severity_map.get(final_severity, base_risk_level)
 
-        # 7. Formulate clear explanation
+        # 6. Formulate clear explanation
         base_expl = env_result.get("explanation", "")
         if escalation_reasons:
             explanation = (

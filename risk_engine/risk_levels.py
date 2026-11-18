@@ -2,6 +2,23 @@ from math import isfinite
 from typing import Optional
 
 
+# EDA (electrodermal activity) thresholds in microsiemens
+EDA_CATEGORIES = (
+	(10.0, 20.0, "elevated",  "moderate",  1),
+	(20.0, 30.0, "high",      "high",      2),
+	(30.0, float("inf"), "very_high", "very_high", 3),
+)
+
+# PM2.5 → AQI breakpoints (EPA): (C_lo, C_hi, AQI_lo, AQI_hi)
+_PM25_BREAKPOINTS = (
+	(0.0,   12.0,  0,   50),
+	(12.1,  35.4,  51,  100),
+	(35.5,  55.4,  101, 150),
+	(55.5,  150.4, 151, 200),
+	(150.5, 250.4, 201, 300),
+	(250.5, 500.4, 301, 500),
+)
+
 AQI_CATEGORIES = (
 	(0, 50, "good", "low", 0),
 	(51, 100, "moderate", "moderate", 1),
@@ -35,6 +52,27 @@ def classify_aqi(value: Optional[float]) -> Optional[dict]:
 				"severity": severity,
 			}
 	raise ValueError("AQI is outside the supported range")
+
+
+def classify_eda(value_us: Optional[float]) -> dict:
+	"""Classify EDA (electrodermal activity) in microsiemens as a stress proxy."""
+	if value_us is None or not isfinite(value_us) or value_us < 0:
+		return {"value": value_us, "category": "unavailable", "risk_level": "unknown", "severity": 0}
+	for lower, upper, category, risk_level, severity in EDA_CATEGORIES:
+		if lower <= value_us < upper:
+			return {"value": value_us, "category": category, "risk_level": risk_level, "severity": severity}
+	return {"value": value_us, "category": "normal", "risk_level": "low", "severity": 0}
+
+
+def compute_aqi_from_pm25(pm25_ug_m3: float) -> Optional[float]:
+	"""Convert PM2.5 concentration (µg/m³) to AQI using EPA linear interpolation."""
+	if not isfinite(pm25_ug_m3) or pm25_ug_m3 < 0:
+		return None
+	c = int(pm25_ug_m3 * 10) / 10.0  # EPA truncates to 1 decimal
+	for c_lo, c_hi, aqi_lo, aqi_hi in _PM25_BREAKPOINTS:
+		if c_lo <= c <= c_hi:
+			return round(((aqi_hi - aqi_lo) / (c_hi - c_lo)) * (c - c_lo) + aqi_lo)
+	return 500.0  # above 500.4 µg/m³ — clamp to max
 
 
 def calculate_heat_index_celsius(
