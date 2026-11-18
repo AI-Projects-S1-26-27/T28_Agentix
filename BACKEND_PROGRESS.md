@@ -32,7 +32,7 @@ The HealthSensing backend provides a local-first, privacy-preserving ingestion, 
 ### 2.1 Shared Data Models & Validations
 Implemented in [backend/models/](backend/models/):
 
-- `Measurement`: Timezone-aware UTC timestamp, source provenance, scenario label, physiological metrics (`heart_rate`, `spo2`, `body_temperature`, `activity_level`, `eda`), and environmental conditions (`ambient_temperature`, `humidity`, `aqi`, `pm25`). Full validation with explicit `null` support for unobserved channels.
+- `Measurement`: Timezone-aware UTC timestamp, source provenance, optional participant ID and experimental protocol label, physiological metrics (`heart_rate`, `spo2`, `body_temperature`, `activity_level`, `eda`), and environmental conditions (`ambient_temperature`, `humidity`, `aqi`, `pm25`). Full validation with explicit `null` support for unobserved channels.
 - `RiskAssessment` & `RiskComponent`: Multimodal risk status (`low`, `moderate`, `high`, `very_high`, `severe`), numerical severity levels (0–4), contributing signals, unassessed inputs, and human-interpretable explanations.
 - `Alert`: Triggered warnings and critical notifications with deduplication, categories (`heat_stress`, `air_quality`, `physiological`, `multimodal`), and user acknowledgment tracking.
 - `ScenarioInfo`, `ScenarioRunRequest`, `ScenarioRunResponse`: Definitions and parameter ranges for simulator scenarios (`normal`, `heatwave`, `pollution`, `fatigue`).
@@ -52,7 +52,7 @@ Configurable via `HEALTHSENSING_DATABASE_PATH` (defaults to local `data/healthse
 ### 2.3 Service Layer
 Implemented in [backend/services/](backend/services/):
 
-- **`RiskService`**: Combines environmental screening (heat index calculation and AQI categorization via `risk_engine`) with physiological stress indicators (tachycardia during heatwaves, SpO₂ drops during pollution spikes, extreme vitals).
+- **`RiskService`**: Combines environmental screening (heat index calculation and AQI categorization via `risk_engine`) with physiological indicators. It also records personalized anomaly screening against a stable participant baseline in the risk components; an anomaly alone does not trigger a health alert.
 - **`AlertService`**: Automatically produces alerts for high-risk conditions (`severity >= 2`), implements rate limiting and 30-second category deduplication, and handles acknowledgment lifecycle.
 - **`DataService`**: Central orchestrator coordinating database writes, risk evaluation, alert generation, and WebSocket broadcast in a single transactional step.
 
@@ -106,10 +106,10 @@ The test suite covers database persistence, schema validation, service coordinat
 To run tests:
 
 ```bash
-python -m pytest tests/test_backend.py tests/test_services.py tests/test_api.py tests/test_websocket_protocol.py tests/test_e2e_integration.py tests/test_simulator_contract.py tests/test_risk_engine.py
+python -m pytest -q
 ```
 
-All 36 tests pass cleanly.
+Latest local validation: 221 passed. One existing Starlette deprecation warning remains for `httpx` in `TestClient`.
 
 ---
 
@@ -128,7 +128,8 @@ All 36 tests pass cleanly.
 - **Aryan Saini (Person 2 - Simulator):**
   - The simulator can stream data to `POST /api/readings` or trigger controlled scenario bursts using `POST /api/scenarios/run` with `heatwave`, `pollution`, `fatigue`, or `normal`.
 - **Kartikeya Singh & Siddhartha Venkata Arava Reddy (Data & Evaluation):**
-  - Cleaned dataset streams or benchmark replay tools can ingest historical time-series using `POST /api/readings` with `source: "dataset"` or `"wesad"`.
+  - `data/src/replay_wesad_to_backend.py` calibrates each participant from the first 70% of WESAD baseline-label (`1`) rows, then replays later rows through `POST /api/readings`.
+  - Participant IDs and original protocol labels are preserved. Personalized anomaly results are saved under `components.personalized_anomaly`; protocol labels are not treated as health-risk ground truth.
 
 ---
 
