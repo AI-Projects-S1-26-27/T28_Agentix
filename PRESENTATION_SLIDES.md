@@ -14,6 +14,8 @@
 - **Team Name & Number:** AGENTIX — Team 28
 - **Project Track & Type:** Application Track — Local/Edge-First Health Analytics and Early-Warning Prototype
 - **GitHub Repository:** `https://github.com/animish-k/HealthSensing`
+- **Live Production Dashboard:** `https://healthsensing.vercel.app`
+- **Live Backend Web Service:** `https://healthsensing.onrender.com`
 - **Team Members:**
   - Animish Kumar (AI/ML Pipeline Lead)
   - Aryan Saini (Simulator & Scenarios Lead)
@@ -72,6 +74,7 @@
   - S3 exhibited an -89% electrodermal baseline drift. Strategy A's inflated variance suppressed stress recall to 33.59% (latency 419s).
   - Strategy D automatically stabilized at offset 318s, restoring recall to **55.78%** and reducing detection latency to **188 seconds** (3.8 minutes faster).
 - **Core Conclusion:** Personalized reference standardization is non-negotiable for wearable anomaly detection; population-level models fail across human biological diversity.
+- **Live System Demonstration:** Live dashboard deployed at `https://healthsensing.vercel.app` backed by persistent Python ASGI service on Render (`https://healthsensing.onrender.com`).
 
 ---
 
