@@ -6,7 +6,15 @@ import RiskCard from '../components/RiskCard'
 import LiveChart from '../components/LiveChart'
 import { api } from '../services/api'
 import store from '../services/dataStore'
-import { Activity, Wifi, WifiOff, Wind } from 'lucide-react'
+import { Activity, Wifi, WifiOff, Wind, SlidersHorizontal } from 'lucide-react'
+import contextStore from '../services/contextStore'
+
+const CONTEXT_LABELS = {
+  exercising:   { label: 'Exercising',       color: 'var(--accent-health)' },
+  air_polluted: { label: 'Air Polluted Area', color: 'var(--accent-env)' },
+  resting:      { label: 'Resting',           color: 'var(--accent-primary)' },
+  high_stress:  { label: 'High Stress',       color: 'var(--accent-warning)' },
+}
 
 function aqiFromPm25(pm25) {
   if (pm25 == null) return null
@@ -29,6 +37,14 @@ export default function Dashboard() {
   const [latest, setLatest] = useState(store.latest)
   const [riskData, setRiskData] = useState(store.riskData)
   const [history, setHistory] = useState(store.history)
+  const [activeCtx, setActiveCtx] = useState(contextStore.flags)
+
+  // Sync context flags when page becomes visible
+  useEffect(() => {
+    const sync = () => setActiveCtx([...contextStore.flags])
+    window.addEventListener('focus', sync)
+    return () => window.removeEventListener('focus', sync)
+  }, [])
 
   // Real-time updates from app-level WebSocket (via context)
   useEffect(() => {
@@ -84,13 +100,31 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Active context chips */}
+      {activeCtx.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <SlidersHorizontal size={13} style={{ color: 'var(--text-muted)' }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Context:</span>
+          {activeCtx.map(key => {
+            const m = CONTEXT_LABELS[key]
+            if (!m) return null
+            return (
+              <span key={key} className="text-xs font-medium px-2 py-0.5 rounded-full"
+                style={{ background: `color-mix(in srgb, ${m.color} 15%, transparent)`, color: m.color }}>
+                {m.label}
+              </span>
+            )
+          })}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <HealthCard reading={latest} />
         <EnvironmentCard reading={latest} />
         <RiskCard risk={riskData} />
       </div>
 
-      {/* AQI summary chip */}
+      {/* AQI chip */}
       {(() => {
         const aqi = aqiFromPm25(latest?.pm25)
         const { label, color } = aqiMeta(aqi)
@@ -112,12 +146,12 @@ export default function Dashboard() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(() => { const w = history.slice(-30); return (<>
-          <LiveChart signal="heart_rate"          data={w} refLines={[{ value: 100, color: 'var(--accent-warning)' }, { value: 50, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="body_temperature"    data={w} refLines={[{ value: 38, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="eda"                 data={w} />
-          <LiveChart signal="pm25"               data={w} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="humidity"            data={w} />
-          <LiveChart signal="ambient_temperature" data={w} />
+          <LiveChart signal="heart_rate"          data={w} refLines={contextStore.refLines('heart_rate')} />
+          <LiveChart signal="body_temperature"    data={w} refLines={contextStore.refLines('body_temperature')} />
+          <LiveChart signal="eda"                 data={w} refLines={contextStore.refLines('eda')} />
+          <LiveChart signal="pm25"               data={w} refLines={contextStore.refLines('pm25')} />
+          <LiveChart signal="humidity"            data={w} refLines={contextStore.refLines('humidity')} />
+          <LiveChart signal="ambient_temperature" data={w} refLines={contextStore.refLines('ambient_temperature')} />
           </>) })()}
         </div>
       </div>

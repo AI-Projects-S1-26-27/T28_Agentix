@@ -48,6 +48,18 @@ class RiskService:
         protocol_label = data.get("protocol_label")  # WESAD: 2 = stress protocol
         activity = data.get("activity_level")
         pm25 = data.get("pm25")
+        context_flags = data.get("context_flags") or []
+
+        # Context-aware HR thresholds
+        if "exercising" in context_flags:
+            hr_tachycardia, hr_elevated, hr_bradycardia = 180, 150, 40
+        elif "resting" in context_flags:
+            hr_tachycardia, hr_elevated, hr_bradycardia = 90, 80, 55
+        else:
+            hr_tachycardia, hr_elevated, hr_bradycardia = 130, 105, 45
+
+        # Context-aware EDA threshold
+        eda_elevated_threshold = 5.0 if "high_stress" in context_flags else 10.0
 
         phys_components: Dict[str, Any] = {}
         cross_modal_escalation = False
@@ -81,16 +93,16 @@ class RiskService:
 
         # 4. Physiological baseline & extreme vitals screening
         if hr is not None:
-            if hr > 130 or hr < 45:
+            if hr > hr_tachycardia or hr < hr_bradycardia:
                 phys_components["heart_rate"] = {
                     "risk_level": "very_high",
                     "severity": 3,
                     "value": hr,
-                    "condition": "tachycardia" if hr > 130 else "bradycardia",
+                    "condition": "tachycardia" if hr > hr_tachycardia else "bradycardia",
                 }
                 contributing_signals.append("heart_rate")
                 escalation_reasons.append(f"extreme heart rate ({hr:.0f} bpm)")
-            elif hr > 105:
+            elif hr > hr_elevated:
                 phys_components["heart_rate"] = {
                     "risk_level": "moderate",
                     "severity": 1,
