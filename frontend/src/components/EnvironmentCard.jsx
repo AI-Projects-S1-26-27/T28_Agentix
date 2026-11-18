@@ -1,7 +1,7 @@
-import { Thermometer, Droplets, Wind, CloudFog } from 'lucide-react'
-import { fmt, fmtInt, aqiCategory } from '../utils/formatters'
+import { Thermometer, Droplets, CloudFog } from 'lucide-react'
+import { fmt, fmtInt } from '../utils/formatters'
 
-function MetricRow({ icon: Icon, label, value, unit, color, warning, badge }) {
+function MetricRow({ icon: Icon, label, value, unit, color, warning }) {
   return (
     <div className="flex items-center justify-between py-2.5 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
       <div className="flex items-center gap-2.5">
@@ -14,14 +14,6 @@ function MetricRow({ icon: Icon, label, value, unit, color, warning, badge }) {
         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
       </div>
       <div className="flex items-center gap-2">
-        {badge && (
-          <span
-            className="text-xs px-1.5 py-0.5 rounded font-medium"
-            style={{ background: `color-mix(in srgb, ${badge.color} 15%, transparent)`, color: badge.color }}
-          >
-            {badge.label}
-          </span>
-        )}
         {value !== null && value !== undefined ? (
           <span
             className="font-mono text-sm font-semibold"
@@ -40,10 +32,7 @@ function MetricRow({ icon: Icon, label, value, unit, color, warning, badge }) {
 export default function EnvironmentCard({ reading }) {
   const ambTemp = reading?.ambient_temperature
   const hum     = reading?.humidity
-  const aqi     = reading?.aqi
   const pm25    = reading?.pm25
-
-  const aqiMeta = aqiCategory(aqi)
 
   return (
     <div className="card">
@@ -66,15 +55,6 @@ export default function EnvironmentCard({ reading }) {
         unit="%"
         color="var(--accent-env)"
         warning={hum != null && hum > 80}
-      />
-      <MetricRow
-        icon={Wind}
-        label="AQI"
-        value={aqi != null ? fmtInt(aqi) : null}
-        unit=""
-        color="var(--accent-critical)"
-        warning={aqi != null && aqi > 100}
-        badge={aqi != null ? aqiMeta : undefined}
       />
       <MetricRow
         icon={CloudFog}

@@ -37,7 +37,7 @@ function getTrend(arr, key) {
 }
 
 export default function HealthAnalytics() {
-  const { latestReading } = useConnection()
+  const { isConnected, latestReading } = useConnection()
   const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.history)
 
@@ -57,12 +57,26 @@ export default function HealthAnalytics() {
     }
     if (store.history.length === 0) {
       api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.history = r.slice().reverse(); setHistory(store.history) } })
+        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
         .catch(() => {})
     }
   }, [])
 
-  // App-level polling (App.jsx) handles WS-down fallback.
+  // Polling fallback when disconnected
+  useEffect(() => {
+    if (isConnected) return
+    const latestId = setInterval(() => {
+      api.readings.latest()
+        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
+        .catch(() => {})
+    }, 2000)
+    const histId = setInterval(() => {
+      api.history.readings({ limit: 120 })
+        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .catch(() => {})
+    }, 3000)
+    return () => { clearInterval(latestId); clearInterval(histId) }
+  }, [isConnected])
 
   const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
 
@@ -95,13 +109,11 @@ export default function HealthAnalytics() {
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(() => { const w = history.slice(-30); return (<>
-          <LiveChart signal="heart_rate"       data={w} refLines={[{ value: 100 }, { value: 50 }]} />
-          <LiveChart signal="spo2"             data={w} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="body_temperature" data={w} refLines={[{ value: 38 }, { value: 35 }]} />
-          <LiveChart signal="activity_level"   data={w} />
-          <LiveChart signal="eda"              data={w} />
-          </>) })()}
+          <LiveChart signal="heart_rate"       data={history} refLines={[{ value: 100 }, { value: 50 }]} />
+          <LiveChart signal="spo2"             data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
+          <LiveChart signal="body_temperature" data={history} refLines={[{ value: 38 }, { value: 35 }]} />
+          <LiveChart signal="activity_level"   data={history} />
+          <LiveChart signal="eda"              data={history} />
         </div>
       </div>
 
