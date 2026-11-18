@@ -15,6 +15,19 @@
 
 ---
 
+## 🌐 Live Production Deployment Links
+
+| Component | Host / Platform | Live Endpoint URL | Status |
+| :--- | :--- | :--- | :--- |
+| **Interactive Dashboard** | Vercel Edge | [https://healthsensing.vercel.app](https://healthsensing.vercel.app) | 🟢 Live & Operational |
+| **Backend Web Service** | Render (Persistent SSD) | [https://healthsensing.onrender.com](https://healthsensing.onrender.com) | 🟢 Live & Operational |
+| **OpenAPI / Swagger Docs**| Render | [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs) | 🟢 Interactive API Explorer |
+| **Health Probe** | Render | [https://healthsensing.onrender.com/health](https://healthsensing.onrender.com/health) | 🟢 `{"status": "ok"}` |
+| **Live Telemetry Stream** | Render (WebSocket) | `wss://healthsensing.onrender.com/ws/readings` | 🟢 5s Replay Stream |
+
+
+---
+
 ## 1. System Overview
 
 **HealthSensing** is an edge-first physiological and environmental early-warning companion. It continuously bridges high-frequency wearable physiological telemetry (photoplethysmography heart rate, electrodermal activity, skin temperature) with real-world ambient atmospheric indicators (ambient wet-bulb temperature, relative humidity, particulate air pollution $\text{PM}_{2.5}$ / $\text{PM}_{10}$).
@@ -214,16 +227,18 @@ HealthSensing is configured for dual-cloud deployment:
 1. Sign in to [Vercel](https://vercel.com/) and click **Add New Project**.
 2. Import `animish-k/HealthSensing` and set **Root Directory** to `frontend`.
 3. Framework Preset: `Vite`. Build Command: `npm run build`. Output Directory: `dist`.
-4. In `frontend/vercel.json`, ensure the rewrites point to your Render web service:
+4. In `frontend/vercel.json`, rewrites point to your active Render web service:
    ```json
    {
      "rewrites": [
-       { "source": "/api/:path*", "destination": "https://healthsensing-backend.onrender.com/api/:path*" },
-       { "source": "/ws/:path*", "destination": "https://healthsensing-backend.onrender.com/ws/:path*" },
-       { "source": "/health", "destination": "https://healthsensing-backend.onrender.com/health" }
+       { "source": "/api/:path*", "destination": "https://healthsensing.onrender.com/api/:path*" },
+       { "source": "/ws/:path*", "destination": "https://healthsensing.onrender.com/ws/:path*" },
+       { "source": "/health", "destination": "https://healthsensing.onrender.com/health" }
      ]
    }
    ```
+5. Production Live URL: **[https://healthsensing.vercel.app](https://healthsensing.vercel.app)**
+   - Persistent WebSockets connect directly to `wss://healthsensing.onrender.com/ws/readings`.
 
 ---
 
