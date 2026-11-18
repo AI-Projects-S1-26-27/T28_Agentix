@@ -6,6 +6,7 @@ from risk_engine.risk_levels import (
 	calculate_heat_index_celsius,
 	classify_aqi,
 	classify_heat_index,
+	compute_aqi_from_pm25,
 )
 
 
@@ -26,11 +27,18 @@ def evaluate_environmental_risk(reading: Mapping[str, object]) -> dict:
 	components = {}
 	unavailable_inputs = []
 
-	aqi = _optional_number(reading, "aqi")
-	if aqi is None:
-		unavailable_inputs.append("aqi")
+	# AQI derived from PM2.5 (we have pm25_ug_m3; compute AQI via EPA formula)
+	pm25 = _optional_number(reading, "pm25")
+	if pm25 is not None:
+		aqi_value = compute_aqi_from_pm25(pm25)
+		if aqi_value is not None:
+			aqi_result = classify_aqi(aqi_value)
+			if aqi_result:
+				components["aqi"] = aqi_result
+		else:
+			unavailable_inputs.append("aqi")
 	else:
-		components["air_quality"] = classify_aqi(aqi)
+		unavailable_inputs.append("aqi")
 
 	ambient_temperature = _optional_number(reading, "ambient_temperature")
 	humidity = _optional_number(reading, "humidity")
