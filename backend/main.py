@@ -109,7 +109,7 @@ def _combined_replay_loop():
                 except (ValueError, TypeError):
                     pass
             payload["context_flags"]    = get_context_flags()
-        payload["heart_rate"]       = _optional_float(row.get("heart_rate_bpm"))
+            payload["heart_rate"]       = _optional_float(row.get("heart_rate_bpm"))
             payload["eda"]              = _optional_float(row.get("eda_microsiemens"))
             payload["body_temperature"] = _optional_float(row.get("body_temperature_c"))
             payload["protocol_label"]   = protocol
