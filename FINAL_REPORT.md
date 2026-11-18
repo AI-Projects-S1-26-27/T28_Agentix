@@ -15,12 +15,10 @@
 6. Chaitanya Chalith (Frontend dashboard architecture, visualization, UI testing)
 7. Siddharth Venkata Arava Reddy (ML experiments, LOPO validation protocol, reproducibility, evaluation metrics)
 
-**Live Production Deployments (Application & Demo Track):**
-- **Live Interactive Dashboard:** [https://healthsensing.vercel.app](https://healthsensing.vercel.app)
-- **Live Backend Web Service:** [https://healthsensing.onrender.com](https://healthsensing.onrender.com)
-- **Interactive OpenAPI Documentation:** [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs)
-- **Health Check Probe:** [https://healthsensing.onrender.com/health](https://healthsensing.onrender.com/health)
-- **WebSocket Telemetry Stream:** `wss://healthsensing.onrender.com/ws/readings`
+**Live Production Deployments:**
+- **Frontend:** [https://healthsensing.vercel.app](https://healthsensing.vercel.app)
+- **Backend:** [https://healthsensing.onrender.com](https://healthsensing.onrender.com)
+- **Docs:** [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs)
 
 ---
 
@@ -398,18 +396,13 @@ The HealthSensing repository is verified by a test suite executed via Pytest. In
 
 ---
 
-## 8.5 Live Cloud Deployment & Operational Verification
+## 8.5 Live Deployment Links
 
-In accordance with the Demo & Application Track evaluation guidelines (*"Highly recommended to host the demos live online"*), the HealthSensing platform is fully deployed and accessible in production:
-
-| Component | Cloud Host | Live Production Endpoint | Architecture & Verification |
-| :--- | :--- | :--- | :--- |
-| **Frontend Web Application** | Vercel Edge | [https://healthsensing.vercel.app](https://healthsensing.vercel.app) | React 18, Vite 5.4, Recharts SVG charting, Tailwind CSS, automatic HMR, edge routing with proxy rules to backend. |
-| **Backend REST & WebSocket API** | Render Cloud | [https://healthsensing.onrender.com](https://healthsensing.onrender.com) | Python 3 ASGI service (`uvicorn backend.main:app`), auto-scaling dynamic port binding, continuous combined replay thread. |
-| **Persistent Relational Store** | Render SSD Disk | `/var/data/healthsensing.sqlite3` | 1 GB attached persistent block storage preserving readings, risk scores, alerts, and baseline bounds across reboots. |
-| **Interactive API Explorer** | Render / OpenAPI | [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs) | Swagger UI for interactive contract testing of all 12 REST endpoints. |
-| **Health Liveness Probe** | Render | [https://healthsensing.onrender.com/health](https://healthsensing.onrender.com/health) | Returns `{"status": "ok"}` for automated orchestrator monitoring. |
-| **Continuous Telemetry Stream** | Render WebSocket | `wss://healthsensing.onrender.com/ws/readings` | Native WebSocket endpoint pushing synchronized 5-second empirical WESAD + Ljubljana frames directly to connected browsers. |
+| Service | Live URL | Description |
+| :--- | :--- | :--- |
+| **Frontend** | [https://healthsensing.vercel.app](https://healthsensing.vercel.app) | Interactive React 18 dashboard with real-time Recharts visualization |
+| **Backend** | [https://healthsensing.onrender.com](https://healthsensing.onrender.com) | FastAPI REST service and live telemetry replay engine |
+| **Docs** | [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs) | Interactive OpenAPI / Swagger API explorer |
 
 
 ---

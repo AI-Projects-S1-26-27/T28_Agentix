@@ -15,15 +15,13 @@
 
 ---
 
-## 🌐 Live Production Deployment Links
+## 🌐 Live Deployment Links
 
-| Component | Host / Platform | Live Endpoint URL | Status |
-| :--- | :--- | :--- | :--- |
-| **Interactive Dashboard** | Vercel Edge | [https://healthsensing.vercel.app](https://healthsensing.vercel.app) | 🟢 Live & Operational |
-| **Backend Web Service** | Render (Persistent SSD) | [https://healthsensing.onrender.com](https://healthsensing.onrender.com) | 🟢 Live & Operational |
-| **OpenAPI / Swagger Docs**| Render | [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs) | 🟢 Interactive API Explorer |
-| **Health Probe** | Render | [https://healthsensing.onrender.com/health](https://healthsensing.onrender.com/health) | 🟢 `{"status": "ok"}` |
-| **Live Telemetry Stream** | Render (WebSocket) | `wss://healthsensing.onrender.com/ws/readings` | 🟢 5s Replay Stream |
+| Service | Live URL |
+| :--- | :--- |
+| **Frontend** | [https://healthsensing.vercel.app](https://healthsensing.vercel.app) |
+| **Backend** | [https://healthsensing.onrender.com](https://healthsensing.onrender.com) |
+| **Docs** | [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs) |
 
 
 ---
@@ -237,8 +235,10 @@ HealthSensing is configured for dual-cloud deployment:
      ]
    }
    ```
-5. Production Live URL: **[https://healthsensing.vercel.app](https://healthsensing.vercel.app)**
-   - Persistent WebSockets connect directly to `wss://healthsensing.onrender.com/ws/readings`.
+### Live Deployment Links
+- **Frontend:** [https://healthsensing.vercel.app](https://healthsensing.vercel.app)
+- **Backend:** [https://healthsensing.onrender.com](https://healthsensing.onrender.com)
+- **Docs:** [https://healthsensing.onrender.com/docs](https://healthsensing.onrender.com/docs)
 
 ---
 
