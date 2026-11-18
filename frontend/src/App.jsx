@@ -9,6 +9,7 @@ import HealthAnalytics from './pages/HealthAnalytics'
 import EnvironmentalIntelligence from './pages/EnvironmentalIntelligence'
 import AIRiskAnalysis from './pages/AIRiskAnalysis'
 import Alerts from './pages/Alerts'
+import UserContext from './pages/UserContext'
 import store from './services/dataStore'
 
 function AppRoutes() {
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/environment" element={<EnvironmentalIntelligence />} />
         <Route path="/risk"        element={<AIRiskAnalysis />} />
         <Route path="/alerts"      element={<Alerts />} />
+        <Route path="/context"     element={<UserContext />} />
       </Routes>
     </DashboardLayout>
   )

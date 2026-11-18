@@ -21,6 +21,7 @@ from backend.api.routes import (
     scenarios,
     settings,
 )
+from backend.api.routes.context import router as context_router, get_context_flags
 from backend.api.routes.current import get_repository
 from backend.core.config import database_path
 from backend.db.database import MeasurementRepository
@@ -107,7 +108,8 @@ def _combined_replay_loop():
                     protocol = int(float(row["stress_label"]))
                 except (ValueError, TypeError):
                     pass
-            payload["heart_rate"]       = _optional_float(row.get("heart_rate_bpm"))
+            payload["context_flags"]    = get_context_flags()
+        payload["heart_rate"]       = _optional_float(row.get("heart_rate_bpm"))
             payload["eda"]              = _optional_float(row.get("eda_microsiemens"))
             payload["body_temperature"] = _optional_float(row.get("body_temperature_c"))
             payload["protocol_label"]   = protocol
@@ -154,4 +156,5 @@ app.include_router(history.router, prefix="/api")
 app.include_router(baseline.router, prefix="/api")
 app.include_router(scenarios.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
+app.include_router(context_router, prefix="/api")
 app.include_router(live_stream_router)
