@@ -3,15 +3,15 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://healthsensing-backend.onrender.com/api/:path*"
+      "destination": "https://healthsensing.onrender.com/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "https://healthsensing-backend.onrender.com/ws/:path*"
+      "destination": "https://healthsensing.onrender.com/ws/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://healthsensing-backend.onrender.com/health"
+      "destination": "https://healthsensing.onrender.com/health"
     }
   ]
 }
