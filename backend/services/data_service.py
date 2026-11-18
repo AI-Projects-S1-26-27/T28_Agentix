@@ -1,8 +1,10 @@
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from fastapi.encoders import jsonable_encoder
 
+from backend.core.metrics import metrics_collector
 from backend.db.database import MeasurementRepository
 from backend.models.alert import AlertResponse
 from backend.models.measurement import Measurement, MeasurementResponse
@@ -30,6 +32,7 @@ class DataService:
         self,
         measurement: Measurement,
     ) -> Dict[str, Any]:
+        t0 = time.time()
         # 1. Persist the raw measurement
         saved_reading = self.repository.add(measurement)
 
@@ -60,6 +63,10 @@ class DataService:
                 **saved_reading.to_dict(),
             })
             await self.websocket_manager.broadcast(broadcast_payload)
+            metrics_collector.record_broadcast()
+
+        eval_ms = (time.time() - t0) * 1000.0
+        metrics_collector.record_ingest(eval_ms)
 
         return {
             "reading": saved_reading,
