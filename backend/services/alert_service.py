@@ -67,11 +67,12 @@ class AlertService:
         if not self.repository:
             return None
 
-        # Check de-duplication within 30 seconds for the same category
+        # Cooldown: warning = 5 min, critical = 2 min (per category)
+        cooldown = 120 if alert.level == "critical" else 300
         last_time = self._last_alert_time.get(alert.category)
         if last_time:
             delta = (alert.timestamp - last_time).total_seconds()
-            if delta < 30 and alert.level != "critical":
+            if delta < cooldown:
                 return None
 
         saved = self.repository.add_alert(alert)
