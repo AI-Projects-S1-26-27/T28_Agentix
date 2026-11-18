@@ -101,15 +101,7 @@ export default function Login({ onLogin }) {
             </button>
           </form>
 
-          <p className="text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-            Don't have an account?{' '}
-            <span className="cursor-pointer" style={{ color: 'var(--accent-primary)' }}>Request access</span>
-          </p>
         </div>
-
-        <p className="text-center text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-          © 2024 HealthSensing · Real-time biometric monitoring
-        </p>
       </div>
     </div>
   )
