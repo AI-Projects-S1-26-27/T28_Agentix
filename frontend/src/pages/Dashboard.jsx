@@ -6,7 +6,7 @@ import RiskCard from '../components/RiskCard'
 import LiveChart from '../components/LiveChart'
 import { api } from '../services/api'
 import store from '../services/dataStore'
-import { Activity, Wifi, WifiOff } from 'lucide-react'
+import { Activity, Wifi, WifiOff, Wind } from 'lucide-react'
 
 function aqiFromPm25(pm25) {
   if (pm25 == null) return null
@@ -89,6 +89,21 @@ export default function Dashboard() {
         <EnvironmentCard reading={latest} />
         <RiskCard risk={riskData} />
       </div>
+
+      {/* AQI summary chip */}
+      {(() => {
+        const aqi = aqiFromPm25(latest?.pm25)
+        const { label, color } = aqiMeta(aqi)
+        return (
+          <div className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg w-fit"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <Wind size={14} style={{ color }} />
+            <span style={{ color: 'var(--text-muted)' }}>Air Quality Index (AQI):</span>
+            <span className="font-bold" style={{ color }}>{aqi ?? '—'}</span>
+            <span style={{ color }}>{label}</span>
+          </div>
+        )
+      })()}
 
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
