@@ -93,7 +93,9 @@ def _combined_replay_loop():
     while True:
         ts = _now_iso()
 
-        # --- WESAD (health) ---
+        # One merged payload: both datasets in a single row so /latest has all 6 signals
+        payload: dict = {"timestamp": ts, "source": "combined"}
+
         if wesad_cycle:
             row = next(wesad_cycle)
             protocol = None
@@ -102,28 +104,18 @@ def _combined_replay_loop():
                     protocol = int(float(row["stress_label"]))
                 except (ValueError, TypeError):
                     pass
-            payload = {
-                "timestamp": ts,
-                "source": "wesad",
-                "heart_rate":       _optional_float(row.get("heart_rate_bpm")),
-                "eda":              _optional_float(row.get("eda_microsiemens")),
-                "body_temperature": _optional_float(row.get("body_temperature_c")),
-                "protocol_label":   protocol,
-            }
-            _post(payload)
+            payload["heart_rate"]       = _optional_float(row.get("heart_rate_bpm"))
+            payload["eda"]              = _optional_float(row.get("eda_microsiemens"))
+            payload["body_temperature"] = _optional_float(row.get("body_temperature_c"))
+            payload["protocol_label"]   = protocol
 
-        # --- Ljubljana (environment) ---
         if ljub_cycle:
             row = next(ljub_cycle)
-            payload = {
-                "timestamp": ts,
-                "source": "ljubljana",
-                "pm25":                _optional_float(row.get("pm25_ug_m3")),
-                "ambient_temperature": _optional_float(row.get("ambient_temperature_c")),
-                "humidity":            _optional_float(row.get("humidity_percent")),
-            }
-            _post(payload)
+            payload["pm25"]                = _optional_float(row.get("pm25_ug_m3"))
+            payload["ambient_temperature"] = _optional_float(row.get("ambient_temperature_c"))
+            payload["humidity"]            = _optional_float(row.get("humidity_percent"))
 
+        _post(payload)
         time.sleep(_DELAY_SECONDS)
 
 
