@@ -75,10 +75,13 @@ def _combined_replay_loop():
     if not wesad_csvs and not ljub_csv.exists():
         return
 
-    # Load all rows upfront
+    # Load all rows upfront — skip rows with missing heart_rate_bpm
     wesad_rows = []
     for p in wesad_csvs:
-        wesad_rows.extend(_load_csv(p))
+        wesad_rows.extend(
+            r for r in _load_csv(p)
+            if r.get("heart_rate_bpm") not in (None, "", "nan", "NaN")
+        )
 
     ljub_rows = _load_csv(ljub_csv) if ljub_csv.exists() else []
 
