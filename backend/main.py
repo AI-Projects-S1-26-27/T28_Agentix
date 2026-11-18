@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import time
@@ -28,12 +29,15 @@ repository.initialize()
 
 _BASE_URL = "http://127.0.0.1:8080"
 _DATA_DIR = Path("data/processed")
+# Project root so subprocesses can resolve 'ai', 'backend', 'data' modules
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
+_SUBPROCESS_ENV = {**os.environ, "PYTHONPATH": _PROJECT_ROOT}
 
 
 def _wesad_loop():
     """Replay WESAD health data, looping forever."""
     time.sleep(3)  # let uvicorn finish binding
-    csvs = sorted(_DATA_DIR.glob("wesad_*_real.csv"))
+    csvs = sorted(Path(_PROJECT_ROOT, "data/processed").glob("wesad_*_real.csv"))
     if not csvs:
         print("[replay] No WESAD CSVs found — health data will not stream.")
         return
@@ -49,6 +53,8 @@ def _wesad_loop():
                     "--delay-seconds", "0.5",
                 ],
                 check=True,
+                cwd=_PROJECT_ROOT,
+                env=_SUBPROCESS_ENV,
             )
             print("[replay] WESAD pass done — looping.")
         except subprocess.CalledProcessError as e:
@@ -62,7 +68,7 @@ def _wesad_loop():
 def _ljubljana_loop():
     """Replay Ljubljana env data, looping forever."""
     time.sleep(4)  # offset slightly so both don't hammer at t=0
-    csv = _DATA_DIR / "ljubljana_real.csv"
+    csv = Path(_PROJECT_ROOT, "data/processed/ljubljana_real.csv")
     if not csv.exists():
         print("[replay] Ljubljana CSV not found — env data will not stream.")
         return
@@ -77,6 +83,8 @@ def _ljubljana_loop():
                     "--delay-seconds", "2",
                 ],
                 check=True,
+                cwd=_PROJECT_ROOT,
+                env=_SUBPROCESS_ENV,
             )
             print("[replay] Ljubljana pass done — looping.")
         except subprocess.CalledProcessError as e:
@@ -93,7 +101,6 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=_ljubljana_loop, daemon=True, name="ljubljana-replay").start()
     print("[replay] Background data replay threads started.")
     yield
-    # Daemon threads die automatically with the process — nothing to clean up.
 
 
 app = FastAPI(
@@ -103,7 +110,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for local React dashboard
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -114,7 +120,6 @@ app.add_middleware(
 
 app.dependency_overrides[get_repository] = lambda: repository
 
-# Register API routes
 app.include_router(health.router)
 app.include_router(current.router, prefix="/api")
 app.include_router(risks.router, prefix="/api")
