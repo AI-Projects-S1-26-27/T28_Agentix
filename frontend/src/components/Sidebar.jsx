@@ -72,11 +72,6 @@ export default function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        <div className="px-4 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Local-only · No cloud
-          </p>
-        </div>
       </aside>
     </>
   )
