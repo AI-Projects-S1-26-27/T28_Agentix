@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import AlertCard from '../components/AlertCard'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useConnection } from '../context/ConnectionContext'
 import { api } from '../services/api'
 import { BellRing, CheckCheck, Inbox, Filter } from 'lucide-react'
 
 const FILTERS = ['all', 'info', 'warning', 'critical', 'unacknowledged']
 
 export default function Alerts() {
+  const { latestReading } = useConnection()
   const [alerts, setAlerts] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -16,16 +17,18 @@ export default function Alerts() {
     api.alerts.list().then(r => { setAlerts(r ?? []); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
-  // Refresh on new WS events
-  useWebSocket(useCallback(() => {
-    fetchAlerts()
-  }, [fetchAlerts]))
-
+  // Initial load + periodic refresh
   useEffect(() => {
     fetchAlerts()
     const interval = setInterval(fetchAlerts, 10000)
     return () => clearInterval(interval)
   }, [fetchAlerts])
+
+  // Refresh on new reading from app-level WebSocket
+  useEffect(() => {
+    if (!latestReading) return
+    fetchAlerts()
+  }, [latestReading, fetchAlerts])
 
   async function acknowledge(id) {
     try {
