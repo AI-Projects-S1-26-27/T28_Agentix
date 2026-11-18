@@ -69,40 +69,17 @@ export function getAlertMeta(level) {
 
 // ─── Signal label map ─────────────────────────────────────────────────────────
 
+// Only signals present in the real datasets (WESAD + Ljubljana)
 export const SIGNAL_LABELS = {
-  heart_rate:          { label: 'Heart Rate',   unit: 'bpm',  color: 'var(--accent-danger)' },
-  spo2:                { label: 'SpO₂',          unit: '%',    color: 'var(--accent-env)' },
-  body_temperature:    { label: 'Body Temp',    unit: '°C',   color: 'var(--accent-warning)' },
-  activity_level:      { label: 'Activity',     unit: '',     color: 'var(--accent-primary)' },
-  ambient_temperature: { label: 'Ambient Temp', unit: '°C',   color: 'var(--accent-warning)' },
-  humidity:            { label: 'Humidity',     unit: '%',    color: 'var(--accent-env)' },
-  aqi:                 { label: 'AQI',          unit: '',     color: 'var(--accent-critical)' },
+  heart_rate:          { label: 'Heart Rate',   unit: 'bpm',   color: 'var(--accent-danger)' },
+  body_temperature:    { label: 'Body Temp',    unit: '°C',    color: 'var(--accent-warning)' },
+  eda:                 { label: 'EDA',          unit: 'µS',    color: 'var(--accent-health)' },
   pm25:                { label: 'PM2.5',        unit: 'µg/m³', color: 'var(--accent-critical)' },
-  eda:                 { label: 'EDA',          unit: 'µS',   color: 'var(--accent-health)' },
+  ambient_temperature: { label: 'Ambient Temp', unit: '°C',    color: 'var(--accent-warning)' },
+  humidity:            { label: 'Humidity',     unit: '%',     color: 'var(--accent-env)' },
 }
 
 export function getSignalMeta(key) {
   return SIGNAL_LABELS[key] ?? { label: key, unit: '', color: 'var(--accent-primary)' }
 }
 
-// ─── AQI category helper ──────────────────────────────────────────────────────
-
-export function aqiCategory(aqi) {
-  if (aqi == null) return { label: 'N/A', color: 'var(--text-muted)' }
-  if (aqi <= 50)  return { label: 'Good',                    color: 'var(--accent-health)' }
-  if (aqi <= 100) return { label: 'Moderate',                color: 'var(--accent-warning)' }
-  if (aqi <= 150) return { label: 'Unhealthy (Sensitive)',   color: '#f97316' }
-  if (aqi <= 200) return { label: 'Unhealthy',               color: 'var(--accent-danger)' }
-  if (aqi <= 300) return { label: 'Very Unhealthy',          color: 'var(--accent-critical)' }
-  return                  { label: 'Hazardous',              color: '#7c3aed' }
-}
-
-// ─── Activity label ───────────────────────────────────────────────────────────
-
-export function activityLabel(val) {
-  if (val == null) return '—'
-  if (val < 0.2)  return 'Resting'
-  if (val < 0.5)  return 'Light'
-  if (val < 0.75) return 'Moderate'
-  return 'Active'
-}
