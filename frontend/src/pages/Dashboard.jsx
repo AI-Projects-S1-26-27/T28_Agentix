@@ -8,6 +8,22 @@ import { api } from '../services/api'
 import store from '../services/dataStore'
 import { Activity, Wifi, WifiOff } from 'lucide-react'
 
+function aqiFromPm25(pm25) {
+  if (pm25 == null) return null
+  const c = Math.floor(pm25 * 10) / 10
+  const bp = [[0,12,0,50],[12.1,35.4,51,100],[35.5,55.4,101,150],[55.5,150.4,151,200],[150.5,250.4,201,300],[250.5,500.4,301,500]]
+  for (const [cLo,cHi,aLo,aHi] of bp) if (c>=cLo&&c<=cHi) return Math.round(((aHi-aLo)/(cHi-cLo))*(c-cLo)+aLo)
+  return 500
+}
+function aqiMeta(aqi) {
+  if (aqi==null) return { label:'—', color:'var(--text-muted)' }
+  if (aqi<=50)  return { label:'Good',           color:'var(--accent-health)' }
+  if (aqi<=100) return { label:'Moderate',        color:'var(--accent-warning)' }
+  if (aqi<=150) return { label:'Sensitive Groups',color:'var(--accent-warning)' }
+  if (aqi<=200) return { label:'Unhealthy',       color:'var(--accent-danger)' }
+  return              { label:'Very Unhealthy',   color:'var(--accent-danger)' }
+}
+
 export default function Dashboard() {
   const { isConnected, latestReading } = useConnection()
   const [latest, setLatest] = useState(store.latest)
