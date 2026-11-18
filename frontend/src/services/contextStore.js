@@ -10,7 +10,7 @@
  */
 
 const STORAGE_KEY = 'hs_context_flags'
-const API_URL     = 'http://localhost:8080/api/context'
+const API_URL     = '/api/context'
 
 function load() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') }
