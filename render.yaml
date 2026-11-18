@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: healthsensing-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: healthsensing-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: HEALTHSENSING_DATABASE_PATH
+        value: /var/data/healthsensing.sqlite3
+      - key: PORT
+        value: 10000
