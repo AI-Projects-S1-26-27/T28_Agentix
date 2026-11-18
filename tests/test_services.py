@@ -66,8 +66,8 @@ def test_alert_service_triggers_on_high_risk(tmp_path):
     risk_svc = RiskService(repository=repo)
     alert_svc = AlertService(repository=repo)
 
-    # Trigger air quality hazard: aqi 350
-    m = make_measurement(aqi=350, spo2=92)
+    # Trigger air quality hazard: aqi 350, pm25 250
+    m = make_measurement(aqi=350, pm25=250, spo2=92)
     risk = risk_svc.evaluate_reading(m)
 
     alert = alert_svc.evaluate_and_create_alert(m, risk, reading_id=1)
@@ -114,7 +114,7 @@ async def test_data_service_persists_personalized_anomaly_without_health_alert(t
     measurement = make_measurement(
         source="wesad",
         participant_id="S2",
-        protocol_label=2,
+        protocol_label=None,
         heart_rate=90.0,
         eda=1.2,
     )

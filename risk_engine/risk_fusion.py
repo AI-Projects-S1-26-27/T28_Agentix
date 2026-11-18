@@ -27,18 +27,26 @@ def evaluate_environmental_risk(reading: Mapping[str, object]) -> dict:
 	components = {}
 	unavailable_inputs = []
 
-	# AQI derived from PM2.5 (we have pm25_ug_m3; compute AQI via EPA formula)
+	# AQI derived from PM2.5 (we have pm25_ug_m3; compute AQI via EPA formula) or direct aqi
 	pm25 = _optional_number(reading, "pm25")
 	if pm25 is not None:
 		aqi_value = compute_aqi_from_pm25(pm25)
 		if aqi_value is not None:
 			aqi_result = classify_aqi(aqi_value)
 			if aqi_result:
+				components["air_quality"] = aqi_result
 				components["aqi"] = aqi_result
 		else:
 			unavailable_inputs.append("aqi")
 	else:
-		unavailable_inputs.append("aqi")
+		aqi_direct = _optional_number(reading, "aqi")
+		if aqi_direct is not None:
+			aqi_result = classify_aqi(aqi_direct)
+			if aqi_result:
+				components["air_quality"] = aqi_result
+				components["aqi"] = aqi_result
+		else:
+			unavailable_inputs.append("aqi")
 
 	ambient_temperature = _optional_number(reading, "ambient_temperature")
 	humidity = _optional_number(reading, "humidity")

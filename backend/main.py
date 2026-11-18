@@ -30,7 +30,7 @@ from backend.websocket.live_stream import router as live_stream_router
 repository = MeasurementRepository(database_path())
 repository.initialize()
 
-_BASE_URL = "http://127.0.0.1:8080"
+_BASE_URL = f"http://127.0.0.1:{os.getenv('PORT', '8080')}"
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _DATA_DIR = _PROJECT_ROOT / "data" / "processed"
 _DELAY_SECONDS = 5  # one tick every 5 seconds, both datasets update together
