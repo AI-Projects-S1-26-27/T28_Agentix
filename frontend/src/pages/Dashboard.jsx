@@ -21,13 +21,13 @@ export default function Dashboard() {
     setHistory([...store.history])
   }, [latestReading])
 
-  // Refresh risk score whenever a new reading arrives
+  // Refresh risk score whenever a new reading arrives (WS or polling)
   useEffect(() => {
-    if (!latestReading || !isConnected) return
+    if (!latestReading) return
     api.risks.latest()
       .then(r => { store.riskData = r; setRiskData(r) })
       .catch(() => {})
-  }, [latestReading, isConnected])
+  }, [latestReading])
 
   // Initial load on first mount (skipped if store already has data)
   useEffect(() => {
@@ -43,29 +43,10 @@ export default function Dashboard() {
     }
     if (store.history.length === 0) {
       api.history.readings({ limit: 60 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .then(r => { if (r?.length) { store.history = r.slice().reverse(); setHistory(store.history) } })
         .catch(() => {})
     }
   }, [])
-
-  // Polling fallback when WebSocket is disconnected
-  useEffect(() => {
-    if (isConnected) return
-    const latestId = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
-        .catch(() => {})
-      api.risks.latest()
-        .then(r => { store.riskData = r; setRiskData(r) })
-        .catch(() => {})
-    }, 2000)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 60 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
-        .catch(() => {})
-    }, 3000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected])
 
   return (
     <div className="space-y-6">
@@ -99,12 +80,14 @@ export default function Dashboard() {
           Live Signals
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <LiveChart signal="heart_rate"          data={history} refLines={[{ value: 100, color: 'var(--accent-warning)' }, { value: 50, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="spo2"                data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="body_temperature"    data={history} refLines={[{ value: 38, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="aqi"                 data={history} refLines={[{ value: 100, color: 'var(--accent-warning)' }]} />
-          <LiveChart signal="humidity"            data={history} />
-          <LiveChart signal="ambient_temperature" data={history} />
+          {(() => { const w = history.slice(-30); return (<>
+          <LiveChart signal="heart_rate"          data={w} refLines={[{ value: 100, color: 'var(--accent-warning)' }, { value: 50, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="body_temperature"    data={w} refLines={[{ value: 38, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="eda"                 data={w} />
+          <LiveChart signal="pm25"               data={w} refLines={[{ value: 35, color: 'var(--accent-warning)' }]} />
+          <LiveChart signal="humidity"            data={w} />
+          <LiveChart signal="ambient_temperature" data={w} />
+          </>) })()}
         </div>
       </div>
     </div>
