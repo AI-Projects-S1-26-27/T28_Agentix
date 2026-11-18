@@ -37,7 +37,7 @@ function getTrend(arr, key) {
 }
 
 export default function HealthAnalytics() {
-  const { isConnected, latestReading } = useConnection()
+  const { latestReading } = useConnection()
   const [latest, setLatest]   = useState(store.latest)
   const [history, setHistory] = useState(store.history)
 
@@ -57,28 +57,13 @@ export default function HealthAnalytics() {
     }
     if (store.history.length === 0) {
       api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
+        .then(r => { if (r?.length) { store.history = r.slice().reverse(); setHistory(store.history) } })
         .catch(() => {})
     }
   }, [])
 
-  // Polling fallback when disconnected
-  useEffect(() => {
-    if (isConnected) return
-    const latestId = setInterval(() => {
-      api.readings.latest()
-        .then(r => { if (r?.reading) { store.latest = r.reading; setLatest(r.reading) } })
-        .catch(() => {})
-    }, 2000)
-    const histId = setInterval(() => {
-      api.history.readings({ limit: 120 })
-        .then(r => { if (r?.length) { store.history = r; setHistory(r) } })
-        .catch(() => {})
-    }, 3000)
-    return () => { clearInterval(latestId); clearInterval(histId) }
-  }, [isConnected])
-
-  const signals = ['heart_rate', 'spo2', 'body_temperature', 'activity_level', 'eda']
+  // Available signals from WESAD real dataset only
+  const signals = ['heart_rate', 'body_temperature', 'eda']
 
   return (
     <div className="space-y-6">
@@ -87,17 +72,17 @@ export default function HealthAnalytics() {
           <HeartPulse size={22} className="inline mr-2 mb-0.5" style={{ color: 'var(--accent-danger)' }} />
           Health Analytics
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Biometric signals from wearable sensors</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Biometric signals from WESAD wearable dataset</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {signals.map(sig => {
           const meta = SIGNAL_LABELS[sig] ?? { label: sig, unit: '', color: 'var(--accent-primary)' }
           return (
             <StatTile
               key={sig}
               label={meta.label}
-              value={fmt(latest?.[sig], sig === 'heart_rate' || sig === 'activity_level' ? 0 : 1)}
+              value={fmt(latest?.[sig], sig === 'heart_rate' ? 0 : 1)}
               unit={meta.unit}
               trend={getTrend(history, sig)}
               color={meta.color}
@@ -109,18 +94,18 @@ export default function HealthAnalytics() {
       <div>
         <h2 className="text-base font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Trend Charts</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <LiveChart signal="heart_rate"       data={history} refLines={[{ value: 100 }, { value: 50 }]} />
-          <LiveChart signal="spo2"             data={history} refLines={[{ value: 95, color: 'var(--accent-danger)' }]} />
-          <LiveChart signal="body_temperature" data={history} refLines={[{ value: 38 }, { value: 35 }]} />
-          <LiveChart signal="activity_level"   data={history} />
-          <LiveChart signal="eda"              data={history} />
+          {(() => { const w = history.slice(-30); return (<>
+          <LiveChart signal="heart_rate"       data={w} refLines={[{ value: 100 }, { value: 50 }]} />
+          <LiveChart signal="body_temperature" data={w} refLines={[{ value: 38 }, { value: 35 }]} />
+          <LiveChart signal="eda"              data={w} />
+          </>) })()}
         </div>
       </div>
 
       {latest && (
         <div className="card rounded-xl p-5">
           <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>Current Reading</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {signals.map(sig => {
               const meta = SIGNAL_LABELS[sig] ?? { label: sig, unit: '' }
               return (

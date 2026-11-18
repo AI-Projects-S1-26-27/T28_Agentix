@@ -4,7 +4,6 @@ import {
   HeartPulse,
   Wind,
   Brain,
-  FlaskConical,
   BellRing,
   X,
 } from 'lucide-react'
@@ -14,7 +13,6 @@ const NAV_ITEMS = [
   { to: '/health',      label: 'Health',         Icon: HeartPulse },
   { to: '/environment', label: 'Environment',    Icon: Wind },
   { to: '/risk',        label: 'Risk Analysis',  Icon: Brain },
-  { to: '/simulator',  label: 'Simulator',      Icon: FlaskConical },
   { to: '/alerts',      label: 'Alerts',         Icon: BellRing },
 ]
 
@@ -72,7 +70,6 @@ export default function Sidebar({ open, onClose }) {
           ))}
         </nav>
 
-        {/* Footer tag */}
         <div className="px-4 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Local-only · No cloud
