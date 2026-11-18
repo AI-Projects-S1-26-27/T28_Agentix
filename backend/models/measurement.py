@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
 
 try:
     from pydantic import field_validator
@@ -17,7 +17,9 @@ try:
         return value
 
     _TIMESTAMP_VALIDATOR = field_validator("timestamp")(_validate_timestamp)
-    _TEXT_VALIDATOR = field_validator("source", "scenario")(_validate_non_blank_text)
+    _TEXT_VALIDATOR = field_validator(
+        "source", "scenario", "participant_id"
+    )(_validate_non_blank_text)
 except ImportError:
     from pydantic import validator
 
@@ -32,7 +34,9 @@ except ImportError:
         return value
 
     _TIMESTAMP_VALIDATOR = validator("timestamp", allow_reuse=True)(_validate_timestamp)
-    _TEXT_VALIDATOR = validator("source", "scenario", allow_reuse=True)(_validate_non_blank_text)
+    _TEXT_VALIDATOR = validator(
+        "source", "scenario", "participant_id", allow_reuse=True
+    )(_validate_non_blank_text)
 
 
 class Measurement(BaseModel):
@@ -41,6 +45,12 @@ class Measurement(BaseModel):
     timestamp: datetime
     source: str = Field(..., min_length=1, max_length=64)
     scenario: Optional[str] = Field(default=None, max_length=64)
+    participant_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    protocol_label: Optional[StrictInt] = Field(
+        default=None,
+        ge=0,
+        description="WESAD experimental protocol label, not a health-risk label",
+    )
     heart_rate: Optional[float] = Field(default=None, ge=0, le=300)
     spo2: Optional[float] = Field(default=None, ge=0, le=100)
     body_temperature: Optional[float] = Field(default=None, ge=25, le=45)
@@ -67,6 +77,8 @@ class Measurement(BaseModel):
             timestamp,
             values["source"],
             values["scenario"],
+            values["participant_id"],
+            values["protocol_label"],
             values["heart_rate"],
             values["spo2"],
             values["body_temperature"],

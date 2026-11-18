@@ -7,6 +7,13 @@ from backend.models.measurement import Measurement
 from backend.models.risk import RiskAssessment
 from risk_engine.risk_fusion import evaluate_environmental_risk
 
+PERSONAL_ANOMALY_THRESHOLD = 3.0
+PERSONAL_ANOMALY_SIGNALS = {
+    "heart_rate": "heart_rate_bpm",
+    "eda": "eda_microsiemens",
+    "body_temperature": "body_temperature_c",
+}
+
 
 class RiskService:
     """Service for fusing environmental risks, physiological signals,
@@ -127,6 +134,8 @@ class RiskService:
         if phys_components:
             components["physiological"] = phys_components
 
+        components["personalized_anomaly"] = self._evaluate_personalized_anomaly(data)
+
         # 6. Fuse final severity and risk level
         final_severity = base_severity
         for p in phys_components.values():
@@ -168,3 +177,85 @@ class RiskService:
             contributing_signals=contributing_signals,
             explanation=explanation.strip(),
         )
+
+    def _evaluate_personalized_anomaly(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        participant_id = data.get("participant_id") or "default"
+        baseline_rows = (
+            self.repository.get_baselines(participant_id)
+            if self.repository is not None
+            else []
+        )
+        baselines = {row["signal"]: row for row in baseline_rows}
+        signals: Dict[str, Any] = {}
+        anomaly_count = 0
+        evaluated_count = 0
+
+        for reading_signal, baseline_signal in PERSONAL_ANOMALY_SIGNALS.items():
+            reading_value = data.get(reading_signal)
+            baseline = baselines.get(baseline_signal)
+            valid_reading = (
+                reading_value is None or isfinite(float(reading_value))
+            )
+            result: Dict[str, Any] = {
+                "value": reading_value if valid_reading else None,
+                "anomaly": 0,
+            }
+
+            if not valid_reading:
+                result["evaluation_status"] = "invalid_reading"
+            elif baseline is None:
+                result["evaluation_status"] = "missing_baseline"
+            elif baseline["status"] != "stable":
+                result["evaluation_status"] = "baseline_not_stable"
+                result["baseline_status"] = baseline["status"]
+            elif reading_value is None:
+                result["evaluation_status"] = "missing_reading"
+            else:
+                baseline_mean = float(baseline["mean"])
+                baseline_std = float(baseline["std"])
+
+                if not isfinite(baseline_mean) or not isfinite(baseline_std):
+                    result["evaluation_status"] = "invalid_baseline"
+                elif baseline_std <= 0:
+                    result["baseline_mean"] = baseline_mean
+                    result["baseline_std"] = baseline_std
+                    result["evaluation_status"] = "zero_variance_baseline"
+                else:
+                    result["baseline_mean"] = baseline_mean
+                    result["baseline_std"] = baseline_std
+                    z_score = (float(reading_value) - baseline_mean) / baseline_std
+                    is_anomaly = abs(z_score) > PERSONAL_ANOMALY_THRESHOLD
+                    result.update({
+                        "z_score": z_score,
+                        "threshold": PERSONAL_ANOMALY_THRESHOLD,
+                        "anomaly": int(is_anomaly),
+                        "evaluation_status": "evaluated",
+                    })
+                    evaluated_count += 1
+                    anomaly_count += int(is_anomaly)
+
+            signals[baseline_signal] = result
+
+        unevaluable_count = len(PERSONAL_ANOMALY_SIGNALS) - evaluated_count
+        if not baseline_rows:
+            overall_status = "not_calibrated"
+        elif evaluated_count == 0:
+            overall_status = "unevaluable"
+        elif anomaly_count and unevaluable_count:
+            overall_status = "partially_evaluated_anomaly"
+        elif anomaly_count:
+            overall_status = "anomaly_detected"
+        elif unevaluable_count:
+            overall_status = "partially_evaluated"
+        else:
+            overall_status = "normal"
+
+        return {
+            "participant_id": participant_id,
+            "threshold": PERSONAL_ANOMALY_THRESHOLD,
+            "anomaly_count": anomaly_count,
+            "unevaluable_count": unevaluable_count,
+            "overall_anomaly": int(anomaly_count > 0),
+            "overall_status": overall_status,
+            "signals": signals,
+        }
